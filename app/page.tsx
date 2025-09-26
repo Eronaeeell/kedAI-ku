@@ -87,8 +87,8 @@ export default function HomePage() {
       <Header />
 
       <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-        {/* Component Sidebar */}
-        <ComponentSidebar onAddComponent={handleAddComponent} />
+  {/* Component Sidebar */}
+  <ComponentSidebar onAddComponent={handleAddComponent} onRemoveFromCanvas={handleRemoveComponent} />
 
         {/* Main Canvas Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
