@@ -92,7 +92,7 @@ export default function HomePage() {
 
         {/* Main Canvas Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div style={{ height: `calc(100% - ${panelHeight}px)` }} className="transition-all duration-300 ease-out">
+          <div className="flex-[2]">
             <CampaignCanvas
               selectedComponents={selectedComponents}
               onRemoveComponent={handleRemoveComponent}
@@ -101,18 +101,12 @@ export default function HomePage() {
             />
           </div>
 
-          <div
-            className="h-px bg-gradient-to-r from-transparent via-border/20 to-transparent hover:via-border/40 cursor-row-resize transition-all duration-200 relative"
-            onMouseDown={handleResize}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-          </div>
-
-          <div style={{ height: `${panelHeight}px` }} className="transition-all duration-300 ease-out">
+          <div className="flex-1 border-border/50 bg-card/80 backdrop-blur-xl p-6 overflow-auto leading-5 border-t">
             <GenerationPanel
               isGenerating={isGenerating}
               generatedImage={generatedImage}
               selectedComponents={selectedComponents}
+              onGenerate={() => handleGenerate()}
             />
           </div>
         </div>
