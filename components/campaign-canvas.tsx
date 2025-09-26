@@ -159,6 +159,13 @@ export function CampaignCanvas({
                     shadow: 'shadow-pink-500/25',
                     text: 'text-white font-semibold drop-shadow-lg'
                   }
+                case "Custom":
+                  return {
+                    bg: 'bg-gradient-to-br from-yellow-300/20 via-lime-300/15 to-emerald-300/20',
+                    border: 'border-yellow-400/40',
+                    shadow: 'shadow-emerald-500/25',
+                    text: 'text-white font-semibold drop-shadow-lg'
+                  }
                 default:
                   return {
                     bg: 'bg-gradient-to-br from-slate-500/20 via-gray-500/15 to-zinc-500/20',
