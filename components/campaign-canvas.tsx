@@ -37,10 +37,10 @@ export function CampaignCanvas({
       {/* Central campaign area */}
       <div className="flex-1 relative flex items-center justify-center pt-30">
         <div className="relative transition-all duration-300 ease-out">
-          <div className="relative w-80 h-80 flex items-center justify-center">
+          <div className="relative w-70 h-70 flex items-center justify-center">
             {/* Outer spinning ring */}
             <div
-              className={`absolute inset-[-50px] rounded-full ${
+              className={`absolute inset-[-40px] rounded-full ${
                 isGenerating ? "animate-pulse" : "animate-spin-slow"
               }`}
               style={{

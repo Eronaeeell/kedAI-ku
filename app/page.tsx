@@ -101,7 +101,7 @@ export default function HomePage() {
             />
           </div>
 
-          <div className="flex-1 border-border/50 bg-card/80 backdrop-blur-xl p-6 overflow-auto leading-5 border-t">
+          <div className="flex-1 p-6 overflow-auto leading-5">
             <GenerationPanel
               isGenerating={isGenerating}
               generatedImage={generatedImage}
