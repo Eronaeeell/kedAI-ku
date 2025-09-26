@@ -107,7 +107,7 @@ export function ComponentSidebar({ onAddComponent, onRemoveFromCanvas }: Compone
   if (!mounted) return null
 
   return (
-    <div className="w-80 border-r border-border/50 bg-sidebar/80 backdrop-blur-xl p-6 overflow-y-auto">
+    <div className="w-80 border-r border-border/50 bg-sidebar/80 backdrop-blur-xl p-6 overflow-y-auto no-scrollbar">
       <div className="space-y-6">
         <div>
           <h2 className="text-lg font-semibold text-sidebar-foreground mb-2">Components</h2>

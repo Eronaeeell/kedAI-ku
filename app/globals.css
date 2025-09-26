@@ -120,6 +120,12 @@
 
 /* Custom gradient utilities for Apple-like aesthetics */
 @layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; } /* Chrome/Safari/Edge */
+  .no-scrollbar { 
+    -ms-overflow-style: none;   /* IE/old Edge */
+    scrollbar-width: none;      /* Firefox */
+  }
+  
   .gradient-purple-blue {
     background: linear-gradient(135deg, oklch(0.65 0.25 300), oklch(0.7 0.2 250));
   }
