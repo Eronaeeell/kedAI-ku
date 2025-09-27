@@ -97,35 +97,35 @@ export function CampaignCanvas({
     <div className="flex-1 p-8 relative flex flex-col transition-all duration-300 ease-out">
       <style jsx>{customStyles}</style>
       {/* Background gradient blob */}
-      <div className="absolute inset-[-100px] flex items-center justify-center pointer-events-none">
+      <div className="absolute inset-[-50px] flex items-start justify-center pt-24 pointer-events-none">
         <div
           className={[
-            "w-[600px] h-[600px] rounded-full gradient-purple-blue opacity-15 blur-[100px]",
+            "w-[300px] h-[300px] rounded-full gradient-purple-blue opacity-15 blur-[60px]",
             isGenerating ? "animate-pulse animate-spin" : "",
           ].join(" ")}
           style={isGenerating ? {
             animationDuration: '2s, 8s',
-            transform: 'scale(1.2)',
+            transform: 'scale(1.1)',
           } : {}}
         />
         {isGenerating && (
           <>
-            <div className="absolute w-[400px] h-[400px] rounded-full bg-gradient-to-r from-pink-500/10 to-purple-500/10 blur-[80px] animate-spin [animation-duration:6s] [animation-direction:reverse]" />
-            <div className="absolute w-[800px] h-[800px] rounded-full bg-gradient-to-r from-blue-500/5 to-teal-500/5 blur-[120px] animate-pulse [animation-duration:3s]" />
+            <div className="absolute w-[200px] h-[200px] rounded-full bg-gradient-to-r from-pink-500/10 to-purple-500/10 blur-[40px] animate-spin [animation-duration:6s] [animation-direction:reverse]" />
+            <div className="absolute w-[400px] h-[400px] rounded-full bg-gradient-to-r from-blue-500/5 to-teal-500/5 blur-[80px] animate-pulse [animation-duration:3s]" />
           </>
         )}
       </div>
 
       {/* Central campaign area */}
-      <div className="flex-1 relative flex items-center justify-center pt-30">
-        <div className="relative transition-all duration-300 ease-out">
-          <div className="relative w-70 h-70 flex items-center justify-center">
+      <div className="flex-1 relative flex items-start justify-center pt-10">
+        <div className="relative transition-all duration-300 ease-out mt-8">
+          <div className="relative w-60 h-60 flex items-center justify-center">
             {/* Outer spinning ring */}
             <div
               className={[
-                "absolute inset-[-40px]",
+                "absolute inset-[-30px]",
                 "rounded-[70%_30%_40%_60%_/_50%_70%_30%_50%]",
-                "backdrop-blur-[60px] border",
+                "backdrop-blur-[40px] border",
                 isGenerating
                   ? [
                       "animate-spin animate-pulse animate-morph",
@@ -146,9 +146,9 @@ export function CampaignCanvas({
             {/* Primary Liquid Glass Effects */}
             <div
               className={[
-                "absolute inset-[-30px]",
+                "absolute inset-[-20px]",
                 "rounded-[60%_40%_30%_70%_/_60%_30%_70%_40%]",
-                "backdrop-blur-[40px] border",
+                "backdrop-blur-[30px] border",
                 isGenerating
                   ? [
                       "bg-[linear-gradient(135deg,rgba(236,72,153,0.4),rgba(147,51,234,0.35),rgba(59,130,246,0.4))]",
@@ -169,9 +169,9 @@ export function CampaignCanvas({
             {/* Secondary liquid glass layer */}
             <div
               className={[
-                "absolute inset-[-15px]",
+                "absolute inset-[-10px]",
                 "rounded-[40%_60%_70%_30%_/_40%_70%_30%_60%]",
-                "backdrop-blur-lg border",
+                "backdrop-blur-md border",
                 "bg-[linear-gradient(45deg,rgba(236,72,153,0.3),rgba(147,51,234,0.25),rgba(59,130,246,0.3))]",
                 "border-white/10",
                 "shadow-[0_4px_16px_rgba(236,72,153,0.4),inset_0_1px_0_rgba(255,255,255,0.2)]",
@@ -213,7 +213,7 @@ export function CampaignCanvas({
             <div className="relative z-10 text-center w-full h-full flex items-center justify-center">
               {typeof isGenerating === 'string' && isGenerating.startsWith('data:image') ? (
                 <div 
-                  className="w-60 h-60 rounded-full overflow-hidden cursor-pointer hover:scale-105 hover:shadow-3xl transition-all duration-500 shadow-2xl border-4 border-white/40 backdrop-blur-sm relative group"
+                  className="w-48 h-48 rounded-full overflow-hidden cursor-pointer hover:scale-105 hover:shadow-3xl transition-all duration-500 shadow-2xl border-4 border-white/40 backdrop-blur-sm relative group"
                   onClick={() => {
                     console.log('🖼️ Image clicked, showing preview for:', isGenerating)
                     // Show preview layout instead of modal
@@ -245,7 +245,7 @@ export function CampaignCanvas({
 
           {selectedComponents.map((component, index) => {
             const angle = (index * (360 / Math.max(selectedComponents.length, 1)) * Math.PI) / 180
-            const radius = 200
+            const radius = 180 // Reduced from 200 to 140 to match smaller circle
             const x = radius * Math.cos(angle)
             const y = radius * Math.sin(angle)
 
@@ -306,15 +306,15 @@ export function CampaignCanvas({
                   {/* Liquid glass style chip */}
                   <div
                     className={[
-                      "relative px-4 py-3 rounded-xl backdrop-blur-md border shadow-lg hover:shadow-xl transition-all duration-300 min-w-[100px]",
+                      "relative px-3 py-2 rounded-lg backdrop-blur-md border shadow-md hover:shadow-lg transition-all duration-300 min-w-[80px]",
                       colors.bg,
                       colors.border,
                       colors.shadow,
                     ].join(" ")}
                   >
-                    <div className="absolute inset-0 rounded-xl bg-white/10 backdrop-blur-sm" />
+                    <div className="absolute inset-0 rounded-lg bg-white/10 backdrop-blur-sm" />
                     <div className="relative z-10">
-                      <p className={["text-sm text-center leading-tight", colors.text].join(" ")}>
+                      <p className={["text-xs text-center leading-tight", colors.text].join(" ")}>
                         {component.name}
                       </p>
                     </div>
@@ -324,7 +324,7 @@ export function CampaignCanvas({
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full bg-red-500/90 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm border border-red-400/50 shadow-lg z-50 flex items-center justify-center"
+                    className="absolute -top-1 -right-1 w-5 h-5 p-0 rounded-full bg-red-500/90 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm border border-red-400/50 shadow-md z-50 flex items-center justify-center"
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
@@ -333,7 +333,7 @@ export function CampaignCanvas({
                     }}
                     aria-label={`Remove ${component.name}`}
                   >
-                    <Minus className="w-3 h-3" />
+                    <Minus className="w-2.5 h-2.5" />
                   </Button>
                 </div>
               </div>
