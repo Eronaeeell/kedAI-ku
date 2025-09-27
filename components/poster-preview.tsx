@@ -141,22 +141,31 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 z-50 flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 overflow-hidden">
+      {/* Animated background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-pink-200/100 via-blue-200/100 to-green-200/100 opacity-100"></div>
+      
+      {/* Soft glowing orbs */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-white/20 rounded-full blur-3xl transform -translate-y-1/2 animate-pulse"></div>
+        <div className="absolute bottom-1/3 right-1/4 w-72 h-72 bg-white/20 rounded-full blur-3xl transform translate-y-1/2 animate-pulse delay-700"></div>
+      </div>
+
       {/* Back button */}
       <Button
         onClick={onBack}
         variant="ghost"
         size="sm"
-        className="absolute top-6 left-6 text-white hover:bg-white/10 backdrop-blur-sm"
+        className="absolute top-6 left-6 text-black hover:bg-black/10 backdrop-blur-sm z-10"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Canvas
       </Button>
 
-      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center relative z-10">
         {/* Left side - Poster */}
         <div className="flex items-center justify-center">
-          <Card className="p-6 bg-white/10 backdrop-blur-lg border-white/20 shadow-2xl">
+          <Card className="p-6 bg-white/40 backdrop-blur-xl border-white/40 shadow-2xl">
             <div className="aspect-video w-full max-w-lg">
               <img 
                 src={imageUrl} 
@@ -170,24 +179,24 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
         {/* Right side - Caption and actions */}
         <div className="space-y-6">
           <div>
-            <h2 className="text-3xl font-bold text-white mb-2">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">
               Your Marketing Poster is Ready! 🎉
             </h2>
-            <p className="text-white/70">
+            <p className="text-gray-600">
               Generate a caption and share it on social media
             </p>
           </div>
 
           {/* Caption section */}
-          <Card className="p-6 bg-white/10 backdrop-blur-lg border-white/20">
+          <Card className="p-6 bg-white/60 backdrop-blur-xl border-white/40">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <label className="text-white font-medium">Social Media Caption</label>
+                <label className="text-gray-800 font-medium">Social Media Caption</label>
                 <Button
                   onClick={generateCaption}
                   disabled={isGeneratingCaption}
                   size="sm"
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  className="bg-blue-500 hover:bg-blue-600 text-white shadow-md"
                 >
                   {isGeneratingCaption ? (
                     <>
@@ -207,10 +216,10 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
                 placeholder="Click 'Generate Caption' to create a social media post, or write your own..."
-                className="min-h-[120px] bg-white/5 border-white/20 text-white placeholder:text-white/50 resize-none"
+                className="min-h-[120px] bg-white/80 border-gray-200 text-gray-800 placeholder:text-gray-500 resize-none shadow-inner"
               />
               
-              <div className="text-white/50 text-sm">
+              <div className="text-gray-600 text-sm">
                 {caption.length}/280 characters
               </div>
             </div>
@@ -222,7 +231,7 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
             <Button
               onClick={handlePostToX}
               disabled={!caption.trim() || isPosting || caption.length > 280}
-              className="w-full bg-black hover:bg-gray-900 text-white py-4 text-lg font-semibold"
+              className="w-full bg-black/90 hover:bg-black text-white py-4 text-lg font-semibold backdrop-blur-sm shadow-lg"
             >
               {isPosting ? (
                 <>
@@ -322,11 +331,6 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
             </Card>
           )}
 
-          <div className="text-white/60 text-sm text-center space-y-1">
-            <p>🐦 X posts your caption directly (280 char limit)</p>
-            <p>🔒 LinkedIn posts privately to your connections (3000 char limit)</p>
-            <p>📸 Image posting temporarily disabled - text-only for now</p>
-          </div>
         </div>
       </div>
     </div>
