@@ -105,8 +105,11 @@ export default function HomePage() {
 
       <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
         {/* Component Sidebar */}
-        <ComponentSidebar 
-          onAddComponent={handleAddComponent} 
+        <ComponentSidebar
+          
+          onAddComponent={handleAddComponent}
+          onRemoveFromCanvas={handleRemoveComponent}
+        
           generatedComponents={generatedComponents}
         />
 
@@ -126,7 +129,7 @@ export default function HomePage() {
               isGenerating={isGenerating}
               generatedImage={generatedImage}
               selectedComponents={selectedComponents}
-              onGenerate={() => handleGenerate()}
+              onGenerate={handleGenerate}
               onComponentsGenerated={handleComponentsGenerated}
             />
           </div>
