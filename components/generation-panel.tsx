@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { Download, Share, Twitter, Sparkles, CheckCircle, AlertCircle, ExternalLink, Loader2, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { Download, Share, Twitter, Sparkles, CheckCircle, AlertCircle, ExternalLink, Loader2 } from "lucide-react"
 import { XService } from "@/lib/x-service"
 
 interface SelectedComponent {
@@ -61,6 +61,9 @@ export function GenerationPanel({
     message: string;
     tweetId?: string;
   } | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisResult, setAnalysisResult] = useState<CampaignAnalysis | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const generateQuickCaption = async () => {
     setIsGeneratingCaption(true);
