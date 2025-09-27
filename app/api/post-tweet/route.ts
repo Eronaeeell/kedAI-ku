@@ -1,161 +1,269 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { XTokenManager } from '@/lib/x-tokens';
 
-export async function POST(request: NextRequest) {
+// X API v2 configuration
+const X_API_BASE_URL = 'https://api.twitter.com/2';
+const X_UPLOAD_URL = 'https://upload.twitter.com/1.1';
+
+// Helper function to upload media to X (following X API documentation)
+async function uploadMedia(imageUrl: string, accessToken: string): Promise<string | null> {
   try {
-    const body = await request.json();
-    const { text, imageUrl, imageData } = body;
-
-    if (!text || typeof text !== 'string') {
-      return NextResponse.json(
-        { ok: false, error: 'Tweet text is required' },
-        { status: 400 }
-      );
-    }
-
-    if (text.length > 280) {
-      return NextResponse.json(
-        { ok: false, error: 'Tweet text exceeds 280 characters' },
-        { status: 400 }
-      );
-    }
-
-    // Get valid access token (will refresh if needed)
-    let accessToken: string;
-    try {
-      accessToken = await XTokenManager.getValidAccessToken();
-    } catch (error) {
-      return NextResponse.json(
-        { ok: false, error: 'Authentication failed. Please re-authorize the app.' },
-        { status: 401 }
-      );
-    }
-
-    let mediaIds: string[] = [];
-
-    // Handle image upload if provided
-    if (imageUrl || imageData) {
-      try {
-        let imageBuffer: Buffer;
-        
-        if (imageData) {
-          // Use provided base64 data
-          imageBuffer = Buffer.from(imageData, 'base64');
-        } else if (imageUrl) {
-          // Use image proxy to fetch and convert image
-          const proxyResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/image-proxy`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ imageUrl })
-          });
-
-          if (!proxyResponse.ok) {
-            throw new Error(`Image proxy failed: ${proxyResponse.status}`);
-          }
-
-          const proxyData = await proxyResponse.json();
-          if (!proxyData.success) {
-            throw new Error(proxyData.error || 'Failed to process image');
-          }
-
-          imageBuffer = Buffer.from(proxyData.base64, 'base64');
-        } else {
-          throw new Error('No image data provided');
-        }
-
-        // Upload media to X API v1.1 (required for media uploads)  
-        // Convert Buffer to base64 for X API
-        const base64Image = imageBuffer.toString('base64');
-        
-        const mediaResponse = await fetch('https://upload.twitter.com/1.1/media/upload.json', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            'media_data': base64Image
-          })
-        });
-
-        if (!mediaResponse.ok) {
-          const mediaError = await mediaResponse.text();
-          console.error('Media upload failed:', mediaError);
-          // Continue without image if upload fails
-        } else {
-          const mediaResult = await mediaResponse.json();
-          if (mediaResult.media_id_string) {
-            mediaIds.push(mediaResult.media_id_string);
-          }
-        }
-      } catch (error) {
-        console.error('Image processing error:', error);
-        // Continue without image if processing fails
+    console.log('📤 Uploading media to X using correct X API workflow...');
+    console.log('🔑 Using access token:', accessToken ? 'Present' : 'Missing');
+    
+    // Download and prepare the image
+    let imageBuffer: Buffer;
+    if (imageUrl.startsWith('data:')) {
+      // Handle base64 data URLs
+      const base64Data = imageUrl.split(',')[1];
+      imageBuffer = Buffer.from(base64Data, 'base64');
+      console.log('🖼️ Processing base64 image, size:', imageBuffer.length, 'bytes');
+    } else {
+      console.log('🌐 Fetching image from URL:', imageUrl);
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        console.error('❌ Failed to fetch image:', imageResponse.status, imageResponse.statusText);
+        return null;
       }
+      imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+      console.log('🖼️ Downloaded image, size:', imageBuffer.length, 'bytes');
     }
 
-    // Prepare tweet data
-    const tweetData: any = { text };
-    if (mediaIds.length > 0) {
-      tweetData.media = { media_ids: mediaIds };
+    // Check authentication
+    if (!accessToken) {
+      console.error('❌ No access token provided for media upload');
+      return null;
     }
 
-    // Post the tweet to X API v2
-    const tweetResponse = await fetch('https://api.x.com/2/tweets', {
+    // 🔹 Step 1: Upload the image using X API Media Upload endpoint
+    console.log('🚀 Step 1: Uploading media using FormData (as per X API docs)...');
+    
+    const formData = new FormData();
+    // Convert Buffer to Uint8Array for Blob compatibility
+    const uint8Array = new Uint8Array(imageBuffer);
+    const blob = new Blob([uint8Array], { type: 'image/jpeg' });
+    formData.append('media', blob);
+
+    const uploadResponse = await fetch(`${X_UPLOAD_URL}/media/upload.json`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
+        // Note: Don't set Content-Type header when using FormData, let the browser set it
+      },
+      body: formData
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text().catch(() => 'Unknown error');
+      console.error('❌ Media upload failed:', uploadResponse.status, uploadResponse.statusText);
+      console.error('❌ Error details:', errorText);
+      
+      // Detailed error diagnostics
+      if (uploadResponse.status === 403) {
+        console.error('❌ 403 Forbidden - Possible causes:');
+        console.error('   1. Access token is invalid or expired');
+        console.error('   2. App lacks media upload permissions');
+        console.error('   3. User hasn\'t authorized app with proper scopes');
+        console.error('   4. Rate limit exceeded');
+      } else if (uploadResponse.status === 401) {
+        console.error('❌ 401 Unauthorized - Token authentication failed');
+      } else if (uploadResponse.status === 413) {
+        console.error('❌ 413 Payload Too Large - Image file too big');
+      }
+      
+      return null;
+    }
+
+    const uploadData = await uploadResponse.json();
+    console.log('✅ Step 1 Success - Media uploaded, response:', uploadData);
+    
+    // Extract media_id (can be media_id or media_id_string)
+    const mediaId = uploadData.media_id_string || uploadData.media_id?.toString();
+    
+    if (!mediaId) {
+      console.error('❌ No media_id returned from upload response');
+      console.error('Upload response:', uploadData);
+      return null;
+    }
+
+    console.log('✅ Media uploaded successfully, media_id:', mediaId);
+    return mediaId;
+    
+  } catch (error) {
+    console.error('❌ Error uploading media:', error);
+    return null;
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { text, imageUrl } = await request.json();
+
+    console.log('🐦 X Posting Request:');
+    console.log('📝 Text:', text ? `"${text}"` : '(empty - image-only post)');
+    console.log('🖼️ Image:', imageUrl ? 'Yes' : 'No');
+
+    // Validate request
+    if (!text && !imageUrl) {
+      return NextResponse.json(
+        { error: 'Either text or image is required' },
+        { status: 400 }
+      );
+    }
+
+    // Check for required environment variables
+    if (!process.env.TWITTER_CLIENT_ID) {
+      return NextResponse.json(
+        { error: 'X API credentials not configured' },
+        { status: 500 }
+      );
+    }
+
+    // Get valid access token (this handles refresh automatically)
+    let accessToken: string;
+    try {
+      accessToken = await XTokenManager.getValidAccessToken();
+      console.log('✅ Got access token for X API');
+    } catch (error) {
+      console.error('❌ Failed to get access token:', error);
+      
+      // Check if we have any tokens stored
+      const storedTokens = XTokenManager.getStoredTokens();
+      console.log('🔍 Stored tokens status:', storedTokens ? 'Present' : 'None');
+      
+      // Also check environment variables as fallback
+      const envToken = process.env.TWITTER_ACCESS_TOKEN || process.env.X_ACCESS_TOKEN;
+      if (envToken) {
+        console.log('🔄 Falling back to environment token');
+        accessToken = envToken;
+      } else {
+        return NextResponse.json(
+          { 
+            error: 'No valid X authentication tokens. Please authorize the app first.',
+            details: 'Run the authorization flow or set TWITTER_ACCESS_TOKEN in environment'
+          },
+          { status: 401 }
+        );
+      }
+    }
+
+    // 🔹 Step 1: Upload media first (if image is provided)
+    let mediaId: string | null = null;
+    if (imageUrl) {
+      console.log('🖼️ Image provided, uploading media first...');
+      mediaId = await uploadMedia(imageUrl, accessToken);
+      if (!mediaId) {
+        return NextResponse.json(
+          { error: 'Failed to upload image to X. Check authentication and permissions.' },
+          { status: 500 }
+        );
+      }
+      console.log('✅ Media upload completed, media_id:', mediaId);
+    }
+
+    // 🔹 Step 2: Create the post with the media (following X API docs format)
+    const tweetData: any = {};
+    
+    // Add text (required for tweets, but can be empty string for image-only posts)
+    tweetData.text = text || '';
+    
+    // Add media if we have it
+    if (mediaId) {
+      tweetData.media = {
+        media_ids: [mediaId]
+      };
+    }
+
+    console.log('🚀 Step 2: Creating tweet with data:', tweetData);
+
+    // Post the tweet using the exact format from X API documentation
+    const postResponse = await fetch(`${X_API_BASE_URL}/tweets`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(tweetData)
     });
 
-    const responseData = await tweetResponse.json();
-
-    // Handle rate limiting
-    if (tweetResponse.status === 429) {
-      const retryAfter = tweetResponse.headers.get('x-rate-limit-reset');
-      const retryAfterSec = retryAfter ? Math.max(0, parseInt(retryAfter) - Math.floor(Date.now() / 1000)) : null;
+    if (!postResponse.ok) {
+      const errorData = await postResponse.json().catch(() => ({}));
+      console.error('X API error:', postResponse.status, errorData);
       
-      return NextResponse.json({
-        ok: false,
-        error: 'Rate limit exceeded',
-        rate: {
-          retryAfterSec,
-          resetEpochSec: retryAfter ? parseInt(retryAfter) : null,
-          remaining: parseInt(tweetResponse.headers.get('x-rate-limit-remaining') || '0')
-        }
-      }, { status: 429 });
+      // Handle specific X API errors
+      if (postResponse.status === 401) {
+        return NextResponse.json(
+          { error: 'Authentication failed. Please re-authorize the app.' },
+          { status: 401 }
+        );
+      } else if (postResponse.status === 429) {
+        return NextResponse.json(
+          { error: 'Rate limit exceeded. Please try again later.' },
+          { status: 429 }
+        );
+      } else if (postResponse.status === 403) {
+        return NextResponse.json(
+          { error: 'Forbidden. Check your app permissions or account status.' },
+          { status: 403 }
+        );
+      } else {
+        return NextResponse.json(
+          { 
+            error: errorData.detail || errorData.message || `X API error: ${postResponse.status}`,
+            details: errorData
+          },
+          { status: postResponse.status }
+        );
+      }
     }
 
-    if (!tweetResponse.ok) {
-      console.error('X API Error:', responseData);
-      return NextResponse.json({
-        ok: false,
-        error: responseData.detail || responseData.title || 'Failed to post tweet',
-        details: responseData
-      }, { status: tweetResponse.status });
+    const responseData = await postResponse.json();
+    const tweetId = responseData.data?.id;
+
+    if (!tweetId) {
+      return NextResponse.json(
+        { error: 'Tweet posted but no ID returned' },
+        { status: 500 }
+      );
     }
 
-    // Success - return the tweet data
+    console.log('✅ Tweet posted successfully!');
+    console.log('🆔 Tweet ID:', tweetId);
+    console.log('🔗 Tweet URL: https://x.com/user/status/' + tweetId);
+
     return NextResponse.json({
-      ok: true,
-      tweetId: responseData.data?.id,
-      id: responseData.data?.id,
-      text: responseData.data?.text,
-      data: responseData.data
+      success: true,
+      tweetId: tweetId,
+      url: `https://x.com/user/status/${tweetId}`,
+      message: imageUrl && !text 
+        ? 'Image-only tweet posted successfully!' 
+        : 'Tweet posted successfully!'
     });
 
   } catch (error) {
-    console.error('Tweet posting error:', error);
+    console.error('Error posting to X:', error);
     return NextResponse.json(
-      { 
-        ok: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      },
+      { error: 'Internal server error while posting to X' },
       { status: 500 }
     );
   }
+}
+
+// Handle GET request for testing
+export async function GET() {
+  return NextResponse.json({
+    message: 'X Post API endpoint',
+    endpoints: {
+      'POST /api/post-tweet': 'Post a tweet with optional image',
+      'Required body': {
+        text: 'string (optional if image provided)',
+        imageUrl: 'string (optional - base64 data URL or public URL)'
+      }
+    },
+    test: {
+      imageOnly: 'Send empty text with imageUrl to test image-only posting',
+      textOnly: 'Send text without imageUrl for text-only posting',
+      both: 'Send both text and imageUrl for combined posting'
+    }
+  });
 }

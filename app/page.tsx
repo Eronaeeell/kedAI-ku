@@ -9,18 +9,6 @@ import { GenerationPanel } from "@/components/generation-panel"
 import { PosterPreview } from "@/components/poster-preview"
 import { Header } from "@/components/header"
 
-interface CampaignComponent {
-  id: string
-  type: 'local_data' | 'online_trend' | 'campaign_type'
-  title: string
-  description: string
-  data: any
-  relevanceScore: number
-  category: string
-  keywords: string[]
-  impact: 'high' | 'medium' | 'low'
-}
-
 export default function HomePage() {
   const [selectedComponents, setSelectedComponents] = useState<
     Array<{
@@ -32,7 +20,6 @@ export default function HomePage() {
     }>
   >([])
 
-  const [generatedComponents, setGeneratedComponents] = useState<CampaignComponent[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
   const [panelHeight, setPanelHeight] = useState(300)
@@ -113,10 +100,6 @@ export default function HomePage() {
     }
   }, [])
 
-  const handleComponentsGenerated = useCallback((components: CampaignComponent[]) => {
-    setGeneratedComponents(components)
-  }, [])
-
   const handleResize = useCallback(
     (e: React.MouseEvent) => {
       const startY = e.clientY
@@ -157,12 +140,11 @@ export default function HomePage() {
         <ComponentSidebar
           onAddComponent={handleAddComponent}
           onRemoveFromCanvas={handleRemoveComponent}
-          generatedComponents={generatedComponents}
         />
 
         {/* Main Canvas Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-[2] min-h-0">
+          <div className="flex-[2]">
             <CampaignCanvas
               selectedComponents={selectedComponents}
               onRemoveComponent={handleRemoveComponent}
@@ -172,13 +154,12 @@ export default function HomePage() {
             />
           </div>
 
-          <div className="flex-1 p-6 overflow-y-auto">
+          <div className="flex-1 p-6 overflow-auto leading-5">
             <GenerationPanel
               isGenerating={isGenerating}
               generatedImage={generatedImage}
               selectedComponents={selectedComponents}
               onGenerate={handleGenerate}
-              onComponentsGenerated={handleComponentsGenerated}
             />
           </div>
         </div>

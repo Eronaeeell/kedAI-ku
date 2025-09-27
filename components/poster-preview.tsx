@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Sparkles, Share, Twitter, CheckCircle, AlertCircle, ExternalLink } from "lucide-react"
+import { ArrowLeft, Sparkles, Twitter, CheckCircle, AlertCircle, ExternalLink } from "lucide-react"
 import { XService } from "@/lib/x-service"
 
 interface PosterPreviewProps {
@@ -102,13 +102,6 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
     } finally {
       setIsPosting(false);
     }
-  };
-
-  const handlePostToXIntent = () => {
-    // Fallback: open Twitter intent URL
-    const tweetText = encodeURIComponent(caption);
-    const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
-    window.open(tweetUrl, '_blank', 'width=550,height=420');
   };
 
   return (
@@ -236,36 +229,18 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
               {isPosting ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin mr-3" />
-                  Posting with Image...
+                  Posting...
                 </>
               ) : (
                 <>
                   <Twitter className="w-5 h-5 mr-3" />
-                  Post to X with Image
+                  Post to X
                 </>
               )}
             </Button>
-            
-            <Button
-              onClick={handlePostToXIntent}
-              disabled={!caption.trim()}
-              variant="outline"
-              className="w-full border-white/30 text-white hover:bg-white/10 py-3"
-            >
-              <Share className="w-4 h-4 mr-2" />
-              Open X in Browser
-            </Button>
           </div>
 
-          <div className="text-center space-y-1">
-            <p className="text-white/60 text-sm">
-              <Badge variant="secondary" className="mr-2">Direct Post</Badge>
-              Posts immediately using X API
-            </p>
-            <p className="text-white/50 text-xs">
-              Image will be included automatically • Or use browser option for manual posting
-            </p>
-          </div>
+
         </div>
       </div>
     </div>

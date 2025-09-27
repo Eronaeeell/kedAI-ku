@@ -1,167 +1,237 @@
-// lib/x-service.ts
-interface PostResponse {
-  ok: boolean;
-  tweetId?: string;
-  id?: string;
-  error?: string;
-  text?: string;
-  data?: any;
-  rate?: { 
-    retryAfterSec?: number | null; 
-    resetEpochSec?: number | null; 
-    remaining?: number | null; 
-  };
-  details?: any;
-}
-
-interface PostWithImageOptions {
-  text: string;
-  imageUrl?: string;
-  imageData?: string; // base64 image data
-}
-
-interface XTokens {
+interface XAuthTokens {
   access_token: string;
   refresh_token: string;
-  expires_at?: number;
+  expires_at: number;
+}
+
+interface PostTweetParams {
+  text: string;
+}
+
+interface PostTweetWithImageParams {
+  text: string;
+  imageUrl: string;
+}
+
+interface XServiceResponse {
+  ok: boolean;
+  error?: string;
+  tweetId?: string;
+}
+
+interface AuthUrlResponse {
+  url?: string;
+  error?: string;
+}
+
+interface RefreshTokensResponse {
+  success: boolean;
+  error?: string;
 }
 
 export class XService {
-  private static inFlight = false;
+  private static readonly BASE_URL = '/api';
 
-  static async postTweet(text: string): Promise<PostResponse> {
-    return this.postTweetWithImage({ text });
-  }
-
-  static async postTweetWithImage(options: PostWithImageOptions): Promise<PostResponse> {
-    if (this.inFlight) {
-      return { ok: false, error: "A post is already in progress. Please wait." };
-    }
-    
-    this.inFlight = true;
-    
+  /**
+   * Post a text-only tweet
+   */
+  static async postTweet(text: string): Promise<XServiceResponse> {
     try {
-      const response = await fetch('/api/post-tweet', {
+      const response = await fetch(`${this.BASE_URL}/post-tweet`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          text: options.text,
-          imageUrl: options.imageUrl,
-          imageData: options.imageData
-        })
+        body: JSON.stringify({ text })
       });
 
-      const result: PostResponse = await response.json().catch(() => ({ 
-        ok: false, 
-        error: "Invalid response from server" 
-      }));
-
-      // Handle rate limiting (429)
-      if (response.status === 429) {
-        const retryIn =
-          result?.rate?.retryAfterSec ??
-          (result?.rate?.resetEpochSec ? Math.max(0, result.rate.resetEpochSec - Math.floor(Date.now() / 1000)) : null);
-        const friendly = retryIn ? `Rate-limited. Try again in ~${Math.ceil(retryIn)}s.` : "Rate-limited. Try later.";
-        return { ok: false, error: friendly, rate: result.rate, details: result.details };
-      }
-
-      // If status is 200 (OK), ensure we return success
-      if (response.status === 200 && response.ok) {
-        return { 
-          ok: true, 
-          tweetId: result.tweetId || result.id || "posted",
-          id: result.tweetId || result.id || "posted",
-          text: result.text,
-          data: result.data
-        };
-      }
-
-      // For other status codes, return the error
       if (!response.ok) {
-        return { 
-          ok: false, 
-          error: result.error || `HTTP ${response.status}: ${response.statusText}`,
-          details: result 
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          ok: false,
+          error: errorData.error || `HTTP ${response.status}: ${response.statusText}`
         };
       }
 
-      return result;
+      const data = await response.json();
+      return {
+        ok: true,
+        tweetId: data.tweetId || data.id
+      };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error.message : "Network error occurred"
+        error: error instanceof Error ? error.message : 'Network error'
       };
-    } finally {
-      this.inFlight = false;
     }
   }
 
-  static async refreshTokens(): Promise<{ success: boolean; error?: string }> {
+  /**
+   * Post a tweet with an image (with or without text)
+   */
+  static async postTweetWithImage({ text, imageUrl }: PostTweetWithImageParams): Promise<XServiceResponse> {
     try {
-      const response = await fetch('/api/x-refresh-token', {
+      const response = await fetch(`${this.BASE_URL}/post-tweet`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          text: text || '', // Allow empty text for image-only posts
+          imageUrl 
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          ok: false,
+          error: errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        };
+      }
+
+      const data = await response.json();
+      return {
+        ok: true,
+        tweetId: data.tweetId || data.id
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Network error'
+      };
+    }
+  }
+
+  /**
+   * Get X OAuth authorization URL
+   */
+  static async getAuthUrl(): Promise<AuthUrlResponse> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/x-auth-url`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          error: errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        };
+      }
+
+      const data = await response.json();
+      return {
+        url: data.url || data.authUrl
+      };
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : 'Network error'
+      };
+    }
+  }
+
+  /**
+   * Refresh X OAuth tokens
+   */
+  static async refreshTokens(): Promise<RefreshTokensResponse> {
+    try {
+      const response = await fetch(`${this.BASE_URL}/x-refresh-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         }
       });
 
-      const result = await response.json();
-      
       if (!response.ok) {
-        return { success: false, error: result.error || 'Failed to refresh tokens' };
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          error: errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        };
       }
 
-      return { success: true };
+      const data = await response.json();
+      return {
+        success: data.success || true
+      };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : "Failed to refresh tokens" 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error'
       };
     }
   }
 
-  static async convertImageUrlToBase64(imageUrl: string): Promise<string> {
+  /**
+   * Check if user has valid X tokens
+   */
+  static async checkTokens(): Promise<{ valid: boolean; error?: string }> {
     try {
-      // Use our server-side proxy to avoid CORS issues
-      const response = await fetch('/api/image-proxy', {
-        method: 'POST',
+      const response = await fetch(`${this.BASE_URL}/x-refresh-token`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ imageUrl })
+        }
       });
 
       if (!response.ok) {
-        throw new Error(`Proxy request failed: ${response.status}`);
+        return { valid: false, error: 'No valid tokens found' };
       }
 
       const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to process image');
-      }
-
-      return data.base64;
+      return { valid: data.valid || false };
     } catch (error) {
-      throw new Error(`Failed to convert image: ${error}`);
+      return { 
+        valid: false, 
+        error: error instanceof Error ? error.message : 'Network error' 
+      };
     }
   }
 
-  static async getAuthUrl(): Promise<{ url?: string; error?: string }> {
+  /**
+   * Helper method to handle image upload for posting
+   */
+  static async uploadImage(imageFile: File): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
     try {
-      const response = await fetch('/api/x-auth-url');
-      const result = await response.json();
-      
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const response = await fetch(`${this.BASE_URL}/save-image`, {
+        method: 'POST',
+        body: formData
+      });
+
       if (!response.ok) {
-        return { error: result.error || 'Failed to get auth URL' };
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          error: errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        };
       }
 
-      return { url: result.url };
+      const data = await response.json();
+      return {
+        success: true,
+        imageUrl: data.imageUrl || data.url
+      };
     } catch (error) {
-      return { 
-        error: error instanceof Error ? error.message : "Failed to get auth URL" 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload error'
       };
     }
   }
 }
+
+// Export types for use in other components
+export type {
+  XAuthTokens,
+  PostTweetParams,
+  PostTweetWithImageParams,
+  XServiceResponse,
+  AuthUrlResponse,
+  RefreshTokensResponse
+};
