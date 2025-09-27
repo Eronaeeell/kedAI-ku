@@ -6,6 +6,7 @@ import { useState, useCallback } from "react"
 import { ComponentSidebar } from "@/components/component-sidebar"
 import { CampaignCanvas } from "@/components/campaign-canvas"
 import { GenerationPanel } from "@/components/generation-panel"
+import { PosterPreview } from "@/components/poster-preview"
 import { Header } from "@/components/header"
 
 interface CampaignComponent {
@@ -35,6 +36,7 @@ export default function HomePage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
   const [panelHeight, setPanelHeight] = useState(300)
+  const [showPreview, setShowPreview] = useState(false)
 
   const handleAddComponent = useCallback(
     (component: {
@@ -43,34 +45,72 @@ export default function HomePage() {
       category: string
       color: string
     }) => {
-      const angle = selectedComponents.length * 60 * (Math.PI / 180)
-      const radius = 180
-      const centerX = 300
-      const centerY = 300
+      setSelectedComponents((prev) => {
+        // Check if component already exists
+        const existingComponent = prev.find(comp => comp.id === component.id)
+        if (existingComponent) {
+          console.log('⚠️ Component already exists, not adding:', component.name, 'ID:', component.id)
+          return prev
+        }
 
-      const position = {
-        x: centerX + radius * Math.cos(angle),
-        y: centerY + radius * Math.sin(angle),
-      }
+        const angle = prev.length * 60 * (Math.PI / 180)
+        const radius = 180
+        const centerX = 300
+        const centerY = 300
 
-      setSelectedComponents((prev) => [...prev, { ...component, position }])
+        const position = {
+          x: centerX + radius * Math.cos(angle),
+          y: centerY + radius * Math.sin(angle),
+        }
+
+        console.log('➕ Adding component:', component.name, 'ID:', component.id, 'Position:', position)
+        return [...prev, { ...component, position }]
+      })
     },
-    [selectedComponents.length],
+    [],
   )
 
   const handleRemoveComponent = useCallback((id: string) => {
-    setSelectedComponents((prev) => prev.filter((comp) => comp.id !== id))
+    console.log('🗑️ Attempting to remove component with ID:', id)
+    setSelectedComponents((prev) => {
+      const componentExists = prev.some(comp => comp.id === id)
+      if (!componentExists) {
+        console.log('⚠️ Component not found in current list:', id)
+        return prev
+      }
+      
+      const filteredComponents = prev.filter((comp) => {
+        const shouldKeep = comp.id !== id
+        console.log(`  - Component "${comp.name}" (ID: "${comp.id}") - ${shouldKeep ? 'KEEP' : 'REMOVE'}`)
+        return shouldKeep
+      })
+      console.log('✅ Components after removal:', filteredComponents.map(c => `${c.name} (${c.id})`))
+      return filteredComponents
+    })
   }, [])
 
-  const handleGenerate = useCallback(async () => {
-    setIsGenerating(true)
-
-    // Simulate AI generation process
-    await new Promise((resolve) => setTimeout(resolve, 3000))
-
-    // Mock generated image
-    setGeneratedImage("/ai-generated-campaign-poster.jpg")
-    setIsGenerating(false)
+  const handleGenerate = useCallback((imageUrl: string | boolean) => {
+    if (imageUrl === "GENERATING") {
+      setIsGenerating(true)
+      setGeneratedImage(null) // Clear previous image
+      setShowPreview(false) // Close preview if open
+    } else if (imageUrl === "ERROR") {
+      setIsGenerating(false)
+      // Keep previous image if any
+    } else if (typeof imageUrl === 'string' && imageUrl.startsWith("PREVIEW:")) {
+      // Show preview mode
+      const actualImageUrl = imageUrl.replace("PREVIEW:", "")
+      setGeneratedImage(actualImageUrl)
+      setShowPreview(true)
+    } else if (imageUrl === false || imageUrl === "RESET") {
+      // Reset to normal state
+      setIsGenerating(false)
+      setShowPreview(false)
+    } else if (typeof imageUrl === 'string') {
+      // Set the generated image URL and stop generating
+      setGeneratedImage(imageUrl)
+      setIsGenerating(false)
+    }
   }, [])
 
   const handleComponentsGenerated = useCallback((components: CampaignComponent[]) => {
@@ -103,7 +143,16 @@ export default function HomePage() {
     <div className="h-screen bg-gradient-to-br from-background via-accent/20 to-secondary/30 overflow-hidden">
       <Header />
 
-      <div className="flex h-[calc(100vh-4rem)]">
+      {/* Show preview overlay if enabled */}
+      {showPreview && generatedImage && (
+        <PosterPreview
+          imageUrl={generatedImage}
+          onBack={() => setShowPreview(false)}
+          selectedComponents={selectedComponents}
+        />
+      )}
+
+      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
         {/* Component Sidebar */}
         <ComponentSidebar
           onAddComponent={handleAddComponent}
@@ -117,8 +166,9 @@ export default function HomePage() {
             <CampaignCanvas
               selectedComponents={selectedComponents}
               onRemoveComponent={handleRemoveComponent}
-              isGenerating={isGenerating}
+              isGenerating={isGenerating ? "GENERATING" : (generatedImage || false)}
               onGenerate={handleGenerate}
+              showPreview={showPreview}
             />
           </div>
 

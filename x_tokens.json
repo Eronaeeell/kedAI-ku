@@ -1,0 +1,7 @@
+{
+  "token_type": "bearer",
+  "expires_in": 7200,
+  "access_token": "cmxYdU5DazVqdzJtSXZYcFVNREhkZ2dUU0pPa0ppRTI3TXJrTHZmblRodmdlOjE3NTg5NTE4NDc4NjA6MToxOmF0OjE",
+  "scope": "tweet.write users.read tweet.read offline.access",
+  "refresh_token": "dEI2S0xtbFdXNWNvWjRWU1dPR3ZRanZYLUNMN1lJVDdOUmthOVJSNDhVY0N6OjE3NTg5NTE4NDc4NjA6MTowOnJ0OjE"
+}

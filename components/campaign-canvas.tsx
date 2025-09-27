@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Minus, Sparkles } from "lucide-react"
+import { generateImagePrompt } from "@/lib/prompt-generator"
 
 interface SelectedComponent {
   id: string
@@ -15,8 +16,9 @@ interface SelectedComponent {
 interface CampaignCanvasProps {
   selectedComponents: SelectedComponent[]
   onRemoveComponent: (id: string) => void
-  isGenerating: boolean
-  onGenerate: () => void
+  isGenerating: boolean | string
+  onGenerate: (status: string) => void
+  showPreview?: boolean
 }
 
 export function CampaignCanvas({
@@ -24,17 +26,92 @@ export function CampaignCanvas({
   onRemoveComponent,
   isGenerating,
   onGenerate,
+  showPreview = false,
 }: CampaignCanvasProps) {
+  
+  // Add custom CSS for abstract spinning animations during generation
+  const customStyles = `
+    @keyframes orbit-spin {
+      from { transform: translate(-50%, -50%) rotate(0deg) translateX(20px) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg) translateX(20px) rotate(-360deg); }
+    }
+    @keyframes wobble-spin {
+      0%, 100% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+      25% { transform: translate(-50%, -50%) rotate(90deg) scale(1.1); }
+      50% { transform: translate(-50%, -50%) rotate(180deg) scale(0.95); }
+      75% { transform: translate(-50%, -50%) rotate(270deg) scale(1.05); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.3s ease-out;
+    }
+  `
+  
+  const handleGenerateImage = async () => {
+    if (selectedComponents.length === 0) return
+
+    // Start generating state
+    onGenerate("GENERATING")
+    
+    try {
+      // Send components directly to API - OpenRouter will generate the prompt, then Stability AI will use it
+      console.log('🎨 Starting image generation with components:', selectedComponents)
+      console.log('📡 Components being sent to OpenRouter for prompt generation...')
+      console.log('🤖 Using Stability AI Ultra model for highest quality promotional posters')
+      
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          components: selectedComponents,
+          model: 'ultra' // Use Ultra for highest quality promotional posters
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate image')
+      }
+
+      // Call the parent's onGenerate with the generated image URL
+      onGenerate(data.imageUrl)
+      console.log('✅ Image generation completed successfully')
+      
+    } catch (error) {
+      console.error('Error generating image:', error)
+      // Reset generating state on error
+      onGenerate("ERROR")
+      // Reset to normal state after 3 seconds
+      setTimeout(() => onGenerate("RESET"), 3000)
+    }
+  }
   return (
     <div className="flex-1 p-8 relative flex flex-col transition-all duration-300 ease-out">
+      <style jsx>{customStyles}</style>
       {/* Background gradient blob */}
       <div className="absolute inset-[-100px] flex items-center justify-center pointer-events-none">
         <div
           className={[
             "w-[600px] h-[600px] rounded-full gradient-purple-blue opacity-15 blur-[100px]",
-            isGenerating ? "animate-pulse" : "",
+            isGenerating ? "animate-pulse animate-spin" : "",
           ].join(" ")}
+          style={isGenerating ? {
+            animationDuration: '2s, 8s',
+            transform: 'scale(1.2)',
+          } : {}}
         />
+        {isGenerating && (
+          <>
+            <div className="absolute w-[400px] h-[400px] rounded-full bg-gradient-to-r from-pink-500/10 to-purple-500/10 blur-[80px] animate-spin [animation-duration:6s] [animation-direction:reverse]" />
+            <div className="absolute w-[800px] h-[800px] rounded-full bg-gradient-to-r from-blue-500/5 to-teal-500/5 blur-[120px] animate-pulse [animation-duration:3s]" />
+          </>
+        )}
       </div>
 
       {/* Central campaign area */}
@@ -49,7 +126,7 @@ export function CampaignCanvas({
                 "backdrop-blur-[60px] border",
                 isGenerating
                   ? [
-                      "animate-pulse animate-morph",
+                      "animate-spin animate-pulse animate-morph",
                       "bg-[linear-gradient(135deg,rgba(236,72,153,0.5),rgba(147,51,234,0.45),rgba(59,130,246,0.5))]",
                       "border-pink-400/30",
                       "shadow-[0_12px_48px_rgba(236,72,153,0.7),inset_0_2px_0_rgba(255,255,255,0.4)]",
@@ -61,6 +138,7 @@ export function CampaignCanvas({
                       "shadow-[0_12px_48px_rgba(147,51,234,0.5),inset_0_2px_0_rgba(255,255,255,0.3)]",
                     ].join(" "),
               ].join(" ")}
+              style={isGenerating ? { animationDuration: '2s, 1s, 3s' } : {}}
             />
 
             {/* Primary Liquid Glass Effects */}
@@ -74,7 +152,7 @@ export function CampaignCanvas({
                       "bg-[linear-gradient(135deg,rgba(236,72,153,0.4),rgba(147,51,234,0.35),rgba(59,130,246,0.4))]",
                       "border-pink-400/20",
                       "shadow-[0_8px_32px_rgba(236,72,153,0.7),inset_0_1px_0_rgba(255,255,255,0.3)]",
-                      "animate-morph",
+                      "animate-spin animate-morph animate-pulse",
                     ].join(" ")
                   : [
                       "bg-[linear-gradient(135deg,rgba(147,51,234,0.35),rgba(59,130,246,0.3),rgba(6,182,212,0.35))]",
@@ -83,6 +161,7 @@ export function CampaignCanvas({
                       "animate-morph animate-liquid-float",
                     ].join(" "),
               ].join(" ")}
+              style={isGenerating ? { animationDuration: '3s, 2s, 1.5s', animationDirection: 'reverse' } : {}}
             />
 
             {/* Secondary liquid glass layer */}
@@ -94,8 +173,9 @@ export function CampaignCanvas({
                 "bg-[linear-gradient(45deg,rgba(236,72,153,0.3),rgba(147,51,234,0.25),rgba(59,130,246,0.3))]",
                 "border-white/10",
                 "shadow-[0_4px_16px_rgba(236,72,153,0.4),inset_0_1px_0_rgba(255,255,255,0.2)]",
-                "animate-morph",
+                isGenerating ? "animate-spin animate-morph animate-bounce" : "animate-morph",
               ].join(" ")}
+              style={isGenerating ? { animationDuration: '4s, 2.5s, 2s', animationDirection: 'alternate' } : {}}
             />
 
             {/* Inner spinning accent ring */}
@@ -107,25 +187,54 @@ export function CampaignCanvas({
                 "bg-[linear-gradient(225deg,rgba(168,85,247,0.25),rgba(34,197,94,0.2),rgba(251,146,60,0.25))]",
                 "shadow-[0_2px_12px_rgba(168,85,247,0.3)]",
                 isGenerating
-                  ? "animate-spin animate-morph [animation-duration:1.5s] [animation-direction:reverse]"
+                  ? "animate-spin animate-morph animate-pulse [animation-direction:reverse]"
                   : "animate-morph animate-spin-slow [animation-direction:reverse]",
               ].join(" ")}
+              style={isGenerating ? { 
+                animationDuration: '1s, 1.5s, 0.8s',
+                transform: 'rotate(0deg) scale(1.05)'
+              } : {}}
             />
 
-            {/* Inner glass orb */}
-            <div
-              className={[
-                "absolute inset-[20px] rounded-full backdrop-blur-md",
-                "bg-[linear-gradient(135deg,rgba(255,255,255,0.2),rgba(147,51,234,0.1),rgba(59,130,246,0.08))]",
-                "border border-white/25",
-                "shadow-[0_4px_16px_rgba(147,51,234,0.2),inset_0_2px_0_rgba(255,255,255,0.4)]",
-              ].join(" ")}
-            />
+            {/* Inner glass orb - only show when no image */}
+            {!(typeof isGenerating === 'string' && isGenerating.startsWith('data:image')) && (
+              <div
+                className={[
+                  "absolute inset-[20px] rounded-full backdrop-blur-md",
+                  "bg-[linear-gradient(135deg,rgba(255,255,255,0.2),rgba(147,51,234,0.1),rgba(59,130,246,0.08))]",
+                  "border border-white/25",
+                  "shadow-[0_4px_16px_rgba(147,51,234,0.2),inset_0_2px_0_rgba(255,255,255,0.4)]",
+                ].join(" ")}
+              />
+            )}
 
-            <div className="relative z-10 text-center">
-              <h3 className="text-xl font-semibold text-white drop-shadow-lg backdrop-blur-sm">
-                October&apos;s Campaign
-              </h3>
+            <div className="relative z-10 text-center w-full h-full flex items-center justify-center">
+              {typeof isGenerating === 'string' && isGenerating.startsWith('data:image') ? (
+                <div 
+                  className="w-60 h-60 rounded-full overflow-hidden cursor-pointer hover:scale-105 hover:shadow-3xl transition-all duration-500 shadow-2xl border-4 border-white/40 backdrop-blur-sm relative group"
+                  onClick={() => {
+                    console.log('🖼️ Image clicked, showing preview for:', isGenerating)
+                    // Show preview layout instead of modal
+                    onGenerate(`PREVIEW:${isGenerating}`)
+                  }}
+                >
+                  <img 
+                    src={isGenerating as string} 
+                    alt="Generated Campaign" 
+                    className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110"
+                  />
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+                    <div className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/50 px-2 py-1 rounded backdrop-blur-sm">
+                      Click to preview
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <h3 className="text-xl font-semibold text-white drop-shadow-lg backdrop-blur-sm">
+                  {isGenerating === "GENERATING" ? "Generating..." : "October's Campaign"}
+                </h3>
+              )}
             </div>
           </div>
 
@@ -214,6 +323,7 @@ export function CampaignCanvas({
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
+                      console.log('🔴 Remove button clicked for component:', component.name, 'ID:', component.id)
                       onRemoveComponent(component.id)
                     }}
                     aria-label={`Remove ${component.name}`}
@@ -227,22 +337,27 @@ export function CampaignCanvas({
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-50">
-        <Button
-          onClick={onGenerate}
-          disabled={isGenerating || selectedComponents.length === 0}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
-        >
-          {isGenerating ? (
-            <>Generating...</>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate
-            </>
-          )}
-        </Button>
-      </div>
+      {!showPreview && (
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-50">
+          <Button
+            onClick={handleGenerateImage}
+            disabled={isGenerating === "GENERATING" || selectedComponents.length === 0}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg min-w-[120px]"
+          >
+            {isGenerating === "GENERATING" ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate ({selectedComponents.length})
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

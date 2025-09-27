@@ -6,7 +6,8 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "get-x-tokens": "node get_x_tokens.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
