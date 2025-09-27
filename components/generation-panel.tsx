@@ -3,10 +3,8 @@
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { Download, Share, Twitter, Sparkles, CheckCircle, AlertCircle, ExternalLink, Loader2 } from "lucide-react"
-import { XService } from "@/lib/x-service"
+import { Download, Share, Send, Loader2, CheckCircle, AlertCircle } from "lucide-react"
 
 interface SelectedComponent {
   id: string
@@ -42,7 +40,7 @@ interface GenerationPanelProps {
   isGenerating: boolean
   generatedImage: string | null
   selectedComponents: SelectedComponent[]
-  onGenerate: (imageUrl: string) => void
+  onGenerate: (prompt: string) => void
   onComponentsGenerated?: (components: CampaignComponent[]) => void
 }
 
@@ -53,252 +51,80 @@ export function GenerationPanel({
   onGenerate,
   onComponentsGenerated,
 }: GenerationPanelProps) {
-  const [quickCaption, setQuickCaption] = useState("");
-  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
-  const [isPosting, setIsPosting] = useState(false);
-  const [postResult, setPostResult] = useState<{
-    success: boolean;
-    message: string;
-    tweetId?: string;
-  } | null>(null);
+  const [prompt, setPrompt] = useState(
+    "Based on September's sales data, current cafe food & beverages trend, and weather prediction, can you help to generate a campaign plan for October to boost my sales?",
+  )
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<CampaignAnalysis | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const generateQuickCaption = async () => {
-    setIsGeneratingCaption(true);
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return
+
+    setIsAnalyzing(true)
+    setError(null)
+    setAnalysisResult(null)
+
     try {
-      const response = await fetch('/api/generate-caption', {
+      const response = await fetch('/api/generate-campaign', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          components: selectedComponents
-        })
-      });
+        body: JSON.stringify({ prompt }),
+      })
 
-      if (response.ok) {
-        const data = await response.json();
-        setQuickCaption(data.caption);
+      const result = await response.json()
+
+      if (result.success) {
+        setAnalysisResult(result.data)
+        if (onComponentsGenerated) {
+          onComponentsGenerated(result.data.components)
+        }
       } else {
-        const componentNames = selectedComponents.map(c => c.name).join(', ');
-        setQuickCaption(`🎉 Check out our amazing ${componentNames}! ☕✨ #CafeLife #Coffee`);
+        setError(result.message || 'Failed to generate campaign')
       }
-    } catch (error) {
-      const componentNames = selectedComponents.map(c => c.name).join(', ');
-      setQuickCaption(`🎉 Check out our amazing ${componentNames}! ☕✨ #CafeLife #Coffee`);
+    } catch (err) {
+      setError('Network error occurred')
+      console.error('Error generating campaign:', err)
     } finally {
-      setIsGeneratingCaption(false);
+      setIsAnalyzing(false)
     }
-  };
+  }
 
-  const handleQuickPost = async () => {
-    if (!quickCaption.trim()) {
-      setPostResult({ success: false, message: 'Please generate or enter a caption first' });
-      return;
-    }
-
-    if (quickCaption.length > 280) {
-      setPostResult({ success: false, message: 'Caption exceeds 280 character limit' });
-      return;
-    }
-
-    setIsPosting(true);
-    setPostResult(null);
-
-    try {
-      // Post with image if available
-      const result = await XService.postTweetWithImage({
-        text: quickCaption,
-        imageUrl: generatedImage || undefined
-      });
-      
-      if (result.ok && result.tweetId) {
-        setPostResult({ 
-          success: true, 
-          message: 'Successfully posted to X!',
-          tweetId: result.tweetId
-        });
-        // Clear caption after successful post
-        setQuickCaption('');
-      } else {
-        setPostResult({ success: false, message: result.error || 'Failed to post to X' });
-      }
-    } catch (error) {
-      setPostResult({ success: false, message: 'An unexpected error occurred while posting' });
-    } finally {
-      setIsPosting(false);
-    }
-  };
+  const handleSend = () => {
+    handleGenerate()
+  }
 
   return (
-    <div className="h-full overflow-y-auto leading-5">
+    <div className="h-full overflow-hidden leading-5">
       <div className="max-w-4xl mx-auto h-full overflow-y-auto no-scrollbar">
-        <div className="mt-4 space-y-4 pb-6">
-
-          {/* Loading State */}
-          {isGenerating && (
-            <div className="text-card-foreground flex flex-col gap-4 rounded-xl border shadow-sm p-4 bg-background/50 border-border/50">
-              <label className="text-sm font-medium text-card-foreground">Generating Image...</label>
-              <div className="flex items-center justify-center py-8">
-                <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin mr-3" />
-                <span className="text-sm text-muted-foreground">Please wait, creating your campaign image...</span>
-              </div>
-            </div>
-          )}
-
-          {/* Image Actions */}
-          {generatedImage && generatedImage !== "GENERATING" && generatedImage !== "ERROR" && (
-            <div className="text-card-foreground flex flex-col gap-4 rounded-xl border shadow-sm p-4 bg-background/50 border-border/50">
-              <label className="text-sm font-medium text-card-foreground">Campaign Generated Successfully!</label>
-              <p className="text-sm text-muted-foreground">
-                Your campaign image is displayed in the circle above. Click on the circle to view the full preview.
-              </p>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    const link = document.createElement('a')
-                    link.href = generatedImage
-                    link.download = 'campaign-poster.jpg'
-                    link.click()
-                  }}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    navigator.share?.({
-                      title: 'Marketing Campaign Poster',
-                      text: 'Check out this AI-generated marketing campaign!',
-                      url: generatedImage
-                    }).catch(() => {
-                      // Fallback: copy to clipboard
-                      navigator.clipboard?.writeText(generatedImage)
-                    })
-                  }}
-                >
-                  <Share className="w-4 h-4 mr-2" />
-                  Share
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Quick Post to X */}
-          {generatedImage && selectedComponents.length > 0 && (
-            <div className="text-card-foreground flex flex-col gap-4 rounded-xl border shadow-sm p-4 bg-background/50 border-border/50">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-card-foreground flex items-center gap-2">
-                  <Twitter className="w-4 h-4 text-blue-500" />
-                  Quick Post to X
-                </label>
-                <Button
-                  onClick={generateQuickCaption}
-                  disabled={isGeneratingCaption}
-                  size="sm"
-                  variant="outline"
-                  className="border-primary/20 hover:border-primary/40"
-                >
-                  {isGeneratingCaption ? (
-                    <>
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3 h-3 mr-1" />
-                      Generate
-                    </>
-                  )}
-                </Button>
-              </div>
-              
+        <div className="mt-4">
+          <div className="text-card-foreground flex flex-col gap-4 rounded-xl border shadow-sm p-4 bg-background/50 border-border/50">
+            <label className="text-sm font-medium text-card-foreground">Campaign Brief</label>
+            <div className="relative">
               <Textarea
-                value={quickCaption}
-                onChange={(e) => setQuickCaption(e.target.value)}
-                placeholder="Click 'Generate' to create a caption or write your own..."
-                className="min-h-[80px] bg-background/50 border-border/30 resize-none text-sm"
-                maxLength={300}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Describe your campaign goals and requirements..."
+                className="min-h-[60px] bg-background/50 border-border/50 focus:border-primary/50 pr-12"
+                disabled={isAnalyzing}
               />
-              
-              <div className="flex items-center justify-between text-xs">
-                <Badge variant={quickCaption.length > 280 ? "destructive" : "secondary"}>
-                  {280 - quickCaption.length} characters remaining
-                </Badge>
-                <span className={quickCaption.length > 280 ? 'text-destructive' : 'text-muted-foreground'}>
-                  {quickCaption.length}/280
-                </span>
-              </div>
-
-              {/* Post Result */}
-              {postResult && (
-                <div className={`p-3 rounded-lg ${
-                  postResult.success 
-                    ? 'bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-800' 
-                    : 'bg-red-50 border border-red-200 dark:bg-red-950/20 dark:border-red-800'
-                }`}>
-                  <div className="flex items-start gap-2">
-                    {postResult.success ? (
-                      <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                    )}
-                    <div className="flex-1">
-                      <p className={`text-sm ${
-                        postResult.success 
-                          ? 'text-green-800 dark:text-green-200' 
-                          : 'text-red-800 dark:text-red-200'
-                      }`}>
-                        {postResult.message}
-                      </p>
-                      {postResult.success && postResult.tweetId && (
-                        <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-800">
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="h-auto p-0 text-xs text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
-                            onClick={() => window.open(`https://x.com/user/status/${postResult.tweetId}`, '_blank')}
-                          >
-                            View on X
-                            <ExternalLink className="w-3 h-3 ml-1" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <Button
-                onClick={handleQuickPost}
-                disabled={!quickCaption.trim() || isPosting || quickCaption.length > 280}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white shadow-lg shadow-blue-500/25 border-0"
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="absolute bottom-2 right-2 w-8 h-8 p-0" 
+                onClick={handleSend}
+                disabled={isAnalyzing || !prompt.trim()}
               >
-                {isPosting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Posting with Image...
-                  </>
+                {isAnalyzing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <>
-                    <Twitter className="w-4 h-4 mr-2" />
-                    Post to X with Image
-                  </>
+                  <Send className="w-4 h-4" />
                 )}
               </Button>
-              
-              <p className="text-xs text-muted-foreground">
-                💡 Your generated campaign image will be included with the post automatically
-              </p>
             </div>
-          )}
-
+          </div>
 
           {/* Analysis Results */}
           {analysisResult && (
