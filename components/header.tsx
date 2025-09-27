@@ -1,9 +1,15 @@
+'use client';
+
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Twitter, TestTube, Image as ImageIcon, Linkedin } from 'lucide-react'
+import { History } from 'lucide-react'
 
-export function Header() {
+interface HeaderProps {
+  onHistoryClick?: () => void;
+}
+
+export function Header({ onHistoryClick }: HeaderProps) {
   return (
     <header className="h-16 border-b border-border/50 bg-card/80 backdrop-blur-xl">
       <div className="flex items-center justify-between h-full px-6">
@@ -17,32 +23,16 @@ export function Header() {
         </div>
 
         <div className="flex items-center space-x-4">
-          {/* Navigation Links */}
-          <div className="flex items-center space-x-2">
-            <Link href="/test-twitter">
-              <Button variant="ghost" size="sm" className="text-xs">
-                <Twitter className="w-3 h-3 mr-1" />
-                X Test
-                <Badge variant="secondary" className="ml-1 text-xs">Text</Badge>
-              </Button>
-            </Link>
-            
-            <Link href="/test-image-post">
-              <Button variant="ghost" size="sm" className="text-xs">
-                <ImageIcon className="w-3 h-3 mr-1" />
-                Image Test
-                <Badge variant="outline" className="ml-1 text-xs border-purple-300 text-purple-700 dark:border-purple-600 dark:text-purple-400">Image Only</Badge>
-              </Button>
-            </Link>
-            
-            <Link href="/test-linkedin">
-              <Button variant="ghost" size="sm" className="text-xs">
-                <Linkedin className="w-3 h-3 mr-1" />
-                LinkedIn Test
-                <Badge variant="secondary" className="ml-1 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">New</Badge>
-              </Button>
-            </Link>
-          </div>
+          {/* History Button */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-xs hover:bg-accent/50"
+            onClick={onHistoryClick}
+          >
+            <History className="w-4 h-4 mr-2" />
+            History
+          </Button>
 
           <div className="h-4 w-px bg-border/50"></div>
           

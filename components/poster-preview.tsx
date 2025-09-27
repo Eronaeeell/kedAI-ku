@@ -119,13 +119,16 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
     setLinkedInResult(null);
 
     try {
-      // Post text-only to LinkedIn (no image for now)
-      const result = await LinkedInService.postToLinkedIn(caption);
+      // Post with image to LinkedIn
+      const result = await LinkedInService.postToLinkedInWithImage({
+        text: caption,
+        imageUrl: imageUrl // Use the generated image
+      });
       
       if (result.ok && result.postId) {
         setLinkedInResult({ 
           success: true, 
-          message: `Successfully posted to LinkedIn!`,
+          message: `Successfully posted to LinkedIn with image!`,
           postId: result.postId
         });
       } else {

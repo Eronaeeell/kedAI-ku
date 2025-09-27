@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { XTokenManager } from '@/lib/x-tokens';
+import { FirebasePostService } from '@/lib/firebase-post-service';
 
 // X API v2 configuration
 const X_API_BASE_URL = 'https://api.twitter.com/2';
@@ -230,6 +231,36 @@ export async function POST(request: NextRequest) {
     console.log('✅ Tweet posted successfully!');
     console.log('🆔 Tweet ID:', tweetId);
     console.log('🔗 Tweet URL: https://x.com/user/status/' + tweetId);
+
+    // Log to Firebase (best-effort)
+    try {
+      const postData = {
+        platform: 'x' as const,
+        caption: text ?? null,
+        image: imageUrl ?? null,
+        postId: tweetId, // Store the Twitter ID
+        dateTime: new Date()
+      };
+      
+      console.log('📝 Saving post to Firebase (X):', postData);
+      
+      // Check if post already exists to prevent duplicates
+      const exists = await FirebasePostService.postExists(tweetId, 'x');
+      
+      if (exists) {
+        console.log('ℹ️ Post already exists in Firebase, skipping save');
+      } else {
+        const firebaseId = await FirebasePostService.savePost(postData);
+        
+        if (firebaseId) {
+          console.log('✅ Post saved to Firebase successfully with ID:', firebaseId);
+        } else {
+          console.log('❌ Failed to save post to Firebase');
+        }
+      }
+    } catch (e) {
+      console.error('❌ Firebase logging failed (X):', e);
+    }
 
     return NextResponse.json({
       success: true,

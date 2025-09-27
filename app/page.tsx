@@ -9,6 +9,7 @@ import { GenerationPanel } from "@/components/generation-panel"
 import { PosterPreview } from "@/components/poster-preview"
 import { Header } from "@/components/header"
 import { ForecastSidebar } from "@/components/forecast-sidebar"
+import { PostsSidebar } from "@/components/posts-sidebar"
 
 interface CampaignComponent {
   id: string
@@ -39,6 +40,7 @@ export default function HomePage() {
   const [panelHeight, setPanelHeight] = useState(300)
   const [showPreview, setShowPreview] = useState(false)
   const [showForecastSidebar, setShowForecastSidebar] = useState(false)
+  const [showPostsSidebar, setShowPostsSidebar] = useState(false)
   const [campaignAnalysis, setCampaignAnalysis] = useState<any>(null)
 
   const handleAddComponent = useCallback(
@@ -148,7 +150,7 @@ export default function HomePage() {
 
   return (
     <div className="h-screen bg-gradient-to-br from-background via-accent/20 to-secondary/30 overflow-hidden">
-      <Header />
+      <Header onHistoryClick={() => setShowPostsSidebar(true)} />
 
       {/* Show preview overlay if enabled */}
       {showPreview && generatedImage && (
@@ -199,6 +201,14 @@ export default function HomePage() {
             onClose={() => setShowForecastSidebar(false)}
             campaignAnalysis={campaignAnalysis}
             selectedComponents={selectedComponents}
+          />
+        )}
+
+        {/* Posts Sidebar */}
+        {showPostsSidebar && (
+          <PostsSidebar
+            isOpen={showPostsSidebar}
+            onClose={() => setShowPostsSidebar(false)}
           />
         )}
       </div>
