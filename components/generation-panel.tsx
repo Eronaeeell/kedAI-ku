@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Download, Share, Send, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { Send, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { toast } from "sonner"
 
 interface SelectedComponent {
   id: string
@@ -66,11 +67,9 @@ export function GenerationPanel({
     setAnalysisResult(null)
 
     try {
-      const response = await fetch('/api/generate-campaign', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch("/api/generate-campaign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       })
 
@@ -78,23 +77,27 @@ export function GenerationPanel({
 
       if (result.success) {
         setAnalysisResult(result.data)
-        if (onComponentsGenerated) {
-          onComponentsGenerated(result.data.components)
-        }
+        onComponentsGenerated?.(result.data.components)
+
+        toast.success("Campaign generated", {
+          description: `Created ${result.data.components?.length ?? 0} component(s) with insights.`,
+          duration: 3500,
+        })
       } else {
-        setError(result.message || 'Failed to generate campaign')
+        const msg = result.message || "Failed to generate campaign"
+        setError(msg)
+        toast.error("Generation failed", { description: msg })
       }
     } catch (err) {
-      setError('Network error occurred')
-      console.error('Error generating campaign:', err)
+      setError("Network error occurred")
+      toast.error("Network error", { description: "Please try again." })
+      console.error("Error generating campaign:", err)
     } finally {
       setIsAnalyzing(false)
     }
   }
 
-  const handleSend = () => {
-    handleGenerate()
-  }
+  const handleSend = () => handleGenerate()
 
   return (
     <div className="h-full overflow-hidden leading-5">
@@ -110,23 +113,18 @@ export function GenerationPanel({
                 className="min-h-[60px] bg-background/50 border-border/50 focus:border-primary/50 pr-12"
                 disabled={isAnalyzing}
               />
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="absolute bottom-2 right-2 w-8 h-8 p-0" 
+              <Button
+                size="sm"
+                variant="ghost"
+                className="absolute bottom-2 right-2 w-8 h-8 p-0"
                 onClick={handleSend}
                 disabled={isAnalyzing || !prompt.trim()}
               >
-                {isAnalyzing ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+                {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
             </div>
           </div>
 
-          {/* Analysis Results */}
           {analysisResult && (
             <div className="mt-4 space-y-4">
               <div className="text-card-foreground flex flex-col gap-4 rounded-xl border shadow-sm p-4 bg-background/50 border-border/50">
@@ -134,14 +132,13 @@ export function GenerationPanel({
                   <CheckCircle className="w-5 h-5 text-green-500" />
                   <h3 className="text-lg font-semibold">Analysis Complete</h3>
                 </div>
-                
-                {/* Insights */}
+
                 {analysisResult.insights.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium mb-2">Key Insights:</h4>
                     <ul className="text-sm space-y-1">
-                      {analysisResult.insights.map((insight, index) => (
-                        <li key={index} className="flex items-start gap-2">
+                      {analysisResult.insights.map((insight, i) => (
+                        <li key={i} className="flex items-start gap-2">
                           <span className="text-primary">•</span>
                           <span>{insight}</span>
                         </li>
@@ -150,13 +147,12 @@ export function GenerationPanel({
                   </div>
                 )}
 
-                {/* Recommendations */}
                 {analysisResult.recommendations.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium mb-2">Recommendations:</h4>
                     <ul className="text-sm space-y-1">
-                      {analysisResult.recommendations.map((rec, index) => (
-                        <li key={index} className="flex items-start gap-2">
+                      {analysisResult.recommendations.map((rec, i) => (
+                        <li key={i} className="flex items-start gap-2">
                           <span className="text-primary">•</span>
                           <span>{rec}</span>
                         </li>
@@ -165,7 +161,6 @@ export function GenerationPanel({
                   </div>
                 )}
 
-                {/* Impact Analysis */}
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium">Weather:</span>
@@ -188,7 +183,6 @@ export function GenerationPanel({
             </div>
           )}
 
-          {/* Error State */}
           {error && (
             <div className="mt-4">
               <div className="text-card-foreground flex flex-col gap-4 rounded-xl border shadow-sm p-4 bg-background/50 border-border/50 border-red-200">
@@ -197,12 +191,7 @@ export function GenerationPanel({
                   <h3 className="text-lg font-semibold text-red-700">Error</h3>
                 </div>
                 <p className="text-sm text-red-600">{error}</p>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => setError(null)}
-                  className="w-fit"
-                >
+                <Button size="sm" variant="outline" onClick={() => setError(null)} className="w-fit">
                   Dismiss
                 </Button>
               </div>
