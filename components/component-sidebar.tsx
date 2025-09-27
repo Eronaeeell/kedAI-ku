@@ -15,18 +15,17 @@ interface Component {
 
 interface CampaignComponent {
   id: string
-  type: 'local_data' | 'online_trend' | 'campaign_type'
+  type: "local_data" | "online_trend" | "campaign_type"
   title: string
   description: string
   data: any
   relevanceScore: number
   category: string
   keywords: string[]
-  impact: 'high' | 'medium' | 'low'
+  impact: "high" | "medium" | "low"
 }
 
 const STATIC_COMPONENTS: Component[] = [
-  // Local Data
   { id: "deepavali", name: "Deepavali festival", category: "Local Data", color: "gradient-blue-teal" },
   { id: "coldplay", name: "Coldplay concert", category: "Local Data", color: "gradient-blue-teal" },
   { id: "rainy", name: "Rainy weeks", category: "Local Data", color: "gradient-blue-teal" },
@@ -47,43 +46,41 @@ const STORAGE_KEY = "kedai.customComponents.v1"
 interface ComponentSidebarProps {
   onAddComponent: (component: Component) => void
   generatedComponents?: CampaignComponent[]
-  /** NEW: tell parent to remove this id from the canvas if present */
   onRemoveFromCanvas?: (id: string) => void
 }
 
-export function ComponentSidebar({ onAddComponent, generatedComponents = [], onRemoveFromCanvas }: ComponentSidebarProps) {
+function colorByType(t: CampaignComponent["type"]) {
+  if (t === "local_data") return "gradient-blue-teal"
+  if (t === "online_trend") return "gradient-purple-blue"
+  return "gradient-pink-orange"
+}
+
+export function ComponentSidebar({
+  onAddComponent,
+  generatedComponents = [],
+  onRemoveFromCanvas,
+}: ComponentSidebarProps) {
   const [allComponents, setAllComponents] = useState<Component[]>(STATIC_COMPONENTS)
 
+  // Convert AI components to the same visual spec as static items
   useEffect(() => {
-    // Convert generated components to the Component format
-    const convertedComponents: Component[] = generatedComponents.map(comp => ({
+    const converted: Component[] = generatedComponents.map((comp) => ({
       id: comp.id,
       name: comp.title,
-      category: comp.type === 'local_data' ? 'Local Data' : 
-                comp.type === 'online_trend' ? 'Online trend data' : 
-                'Campaign Type',
-      color: comp.impact === 'high' ? 'gradient-green-blue' : 
-             comp.impact === 'medium' ? 'gradient-yellow-orange' : 
-             'gradient-gray-blue'
+      category:
+        comp.type === "local_data"
+          ? "Local Data"
+          : comp.type === "online_trend"
+          ? "Online trend data"
+          : "Campaign Type",
+      // match static color by category so visuals are identical
+      color: colorByType(comp.type),
     }))
 
-    // Combine static and generated components, removing duplicates
-    const combined = [...STATIC_COMPONENTS, ...convertedComponents]
-    const unique = combined.filter((comp, index, self) => 
-      index === self.findIndex(c => c.id === comp.id)
-    )
-    
+    const combined = [...STATIC_COMPONENTS, ...converted]
+    const unique = combined.filter((c, i, arr) => i === arr.findIndex((x) => x.id === c.id))
     setAllComponents(unique)
   }, [generatedComponents])
-
-  const getImpactColor = (impact: 'high' | 'medium' | 'low') => {
-    switch (impact) {
-      case 'high': return 'bg-green-500'
-      case 'medium': return 'bg-yellow-500'
-      case 'low': return 'bg-gray-500'
-      default: return 'bg-gray-500'
-    }
-  }
 
   const [mounted, setMounted] = useState(false)
   const [customComponents, setCustomComponents] = useState<Component[]>([])
@@ -91,7 +88,9 @@ export function ComponentSidebar({ onAddComponent, generatedComponents = [], onR
   const [newName, setNewName] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!mounted) return
@@ -143,11 +142,9 @@ export function ComponentSidebar({ onAddComponent, generatedComponents = [], onR
     onAddComponent(component)
   }
 
-  // remove a custom component locally AND notify parent/canvas
   function handleRemoveCustom(id: string) {
     setCustomComponents((prev) => prev.filter((c) => c.id !== id))
     if (selectedId === id) setSelectedId(null)
-    // notify parent to remove from canvas if present
     onRemoveFromCanvas?.(id)
   }
 
@@ -159,19 +156,19 @@ export function ComponentSidebar({ onAddComponent, generatedComponents = [], onR
         <div>
           <h2 className="text-lg font-semibold text-sidebar-foreground mb-2">Components</h2>
           <p className="text-sm text-muted-foreground">
-            {generatedComponents.length > 0 
+            {generatedComponents.length > 0
               ? `AI-generated components (${generatedComponents.length}) + static components`
-              : "Drag and drop components to build your campaign"
-            }
+              : "Drag and drop components to build your campaign"}
           </p>
         </div>
 
         {CATEGORIES.map((category) => {
-          const categoryComponents = allComponents.filter((comp) => comp.category === category)
-          const generatedInCategory = generatedComponents.filter(comp => 
-            (comp.type === 'local_data' && category === 'Local Data') ||
-            (comp.type === 'online_trend' && category === 'Online trend data') ||
-            (comp.type === 'campaign_type' && category === 'Campaign Type')
+          const categoryComponents = allComponents.filter((c) => c.category === category)
+          const generatedInCategory = generatedComponents.filter(
+            (gc) =>
+              (gc.type === "local_data" && category === "Local Data") ||
+              (gc.type === "online_trend" && category === "Online trend data") ||
+              (gc.type === "campaign_type" && category === "Campaign Type"),
           )
 
           return (
@@ -189,44 +186,50 @@ export function ComponentSidebar({ onAddComponent, generatedComponents = [], onR
 
               <div className="grid grid-cols-2 gap-3">
                 {categoryComponents.map((component) => {
-                  const isGenerated = generatedComponents.some(comp => comp.id === component.id)
-                  const generatedComp = generatedComponents.find(comp => comp.id === component.id)
-                  
+                  const generatedComp = generatedComponents.find((gc) => gc.id === component.id)
+                  const isGenerated = Boolean(generatedComp)
+
                   return (
                     <Card
                       key={component.id}
-                      className={`p-3 cursor-pointer hover:scale-105 transition-all duration-200 border-border/50 hover:border-primary/50 hover:shadow-lg group min-h-[120px] ${
-                        isGenerated ? 'ring-2 ring-green-200 bg-green-50/50' : ''
-                      }`}
+                      className="relative p-3 cursor-pointer hover:scale-105 transition-all duration-200 border-border/50 hover:border-primary/50 hover:shadow-lg group min-h-[120px]"
                       onClick={() => onAddComponent(component)}
                     >
+                      {isGenerated && (
+                        <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                          AI
+                        </span>
+                      )}
+
                       <div className="flex flex-col items-center text-center space-y-2">
+                        {/* Gradient bubble with white center and inner ring */}
                         <div className="flex items-center justify-center w-full">
                           <div
                             className={`w-12 h-12 rounded-full ${component.color} flex items-center justify-center group-hover:animate-float`}
                           >
-                            <div className="w-6 h-6 bg-white/20 rounded-full" />
+                            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                              <div className="w-4 h-4 rounded-full bg-white/40" />
+                            </div>
                           </div>
                         </div>
-                        
+
                         <div className="w-full">
-                          <p className="text-xs text-card-foreground font-medium leading-tight mb-1">
+                          <p className="text-xs text-card-foreground font-medium leading-tight mb-0.5">
                             {component.name}
                           </p>
-                          
+
                           {isGenerated && generatedComp && (
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <div className={`w-2 h-2 rounded-full ${getImpactColor(generatedComp.impact)}`} />
-                              <span className="text-xs text-muted-foreground">
-                                {generatedComp.relevanceScore}%
-                              </span>
-                            </div>
-                          )}
-                          
-                          {isGenerated && generatedComp && (
-                            <p className="text-xs text-muted-foreground line-clamp-2 leading-tight">
-                              {generatedComp.description}
-                            </p>
+                            <>
+                              <div className="flex items-center justify-center gap-1">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                <span className="text-[10px] text-muted-foreground font-medium">
+                                  {Math.round(generatedComp.relevanceScore)}%
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground line-clamp-2 leading-tight mt-0.5">
+                                {generatedComp.description}
+                              </p>
+                            </>
                           )}
                         </div>
                       </div>
@@ -240,7 +243,9 @@ export function ComponentSidebar({ onAddComponent, generatedComponents = [], onR
 
         {/* Custom section */}
         <div className="space-y-3">
-          <Badge variant="outline" className="text-xs">Custom</Badge>
+          <Badge variant="outline" className="text-xs">
+            Custom
+          </Badge>
           <div className="grid grid-cols-2 gap-3">
             {customComponents.map((component) => {
               const isSelected = selectedId === component.id
@@ -297,7 +302,9 @@ export function ComponentSidebar({ onAddComponent, generatedComponents = [], onR
           placeholder="Component name"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleCreateCustom() }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleCreateCustom()
+          }}
         />
         <div className="flex gap-2 justify-end">
           <button className="px-3 py-1 rounded-md bg-muted text-muted-foreground" onClick={() => setShowModal(false)}>
