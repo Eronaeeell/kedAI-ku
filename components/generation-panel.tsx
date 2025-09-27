@@ -122,6 +122,9 @@ export function GenerationPanel({
     }
   }
 
+  function stripMarkdownBold(text: string) {
+    return text.replace(/\*\*/g, "")
+  }
 
   const handleSend = () => handleGenerate()
 
@@ -181,8 +184,7 @@ export function GenerationPanel({
                         <ul className="text-sm space-y-1">
                           {analysisResult.insights.map((insight, i) => (
                             <li key={i} className="flex items-start gap-2">
-                              <span className="text-primary">•</span>
-                              <span>{insight}</span>
+                              <span>{stripMarkdownBold(insight)}</span>
                             </li>
                           ))}
                         </ul>
@@ -195,8 +197,7 @@ export function GenerationPanel({
                         <ul className="text-sm space-y-1">
                           {analysisResult.recommendations.map((rec, i) => (
                             <li key={i} className="flex items-start gap-2">
-                              <span className="text-primary">•</span>
-                              <span>{rec}</span>
+                              <span>{stripMarkdownBold(rec)}</span>
                             </li>
                           ))}
                         </ul>
