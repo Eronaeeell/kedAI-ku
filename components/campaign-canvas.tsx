@@ -237,7 +237,7 @@ export function CampaignCanvas({
                   className="text-xl font-semibold text-white drop-shadow-lg backdrop-blur-sm cursor-pointer hover:text-blue-200 transition-colors"
                   onClick={() => onForecastAnalysisClick?.()}
                 >
-                  {isGenerating === "GENERATING" ? "Generating..." : "October's Campaign"}
+                  {isGenerating === "GENERATING" ? "Generating..." : (selectedComponents.length > 0 ? "Analyze" : "October's Campaign")}
                 </h3>
               )}
             </div>

@@ -50,6 +50,7 @@ export function ForecastSidebar({
 }: ForecastSidebarProps) {
   const [forecastAnalysis, setForecastAnalysis] = useState<ForecastAnalysisData | null>(null)
   const [isGeneratingForecast, setIsGeneratingForecast] = useState(false)
+  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null)
 
   const generateForecastAnalysis = async (campaignData: CampaignAnalysis) => {
     console.log("Starting forecast analysis generation...")
@@ -82,12 +83,25 @@ export function ForecastSidebar({
     }
   }
 
-  // Generate forecast when sidebar opens
   useEffect(() => {
-    if (isOpen && campaignAnalysis && !forecastAnalysis) {
-      generateForecastAnalysis(campaignAnalysis)
+    if (isOpen && campaignAnalysis && selectedComponents.length > 0) {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer)
+      }
+      
+      const timer = setTimeout(() => {
+        generateForecastAnalysis(campaignAnalysis)
+      }, 500)
+      
+      setDebounceTimer(timer)
     }
-  }, [isOpen, campaignAnalysis])
+    
+    return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer)
+      }
+    }
+  }, [isOpen, campaignAnalysis, selectedComponents])
 
   if (!isOpen) return null
 
@@ -107,7 +121,7 @@ export function ForecastSidebar({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
         {isGeneratingForecast ? (
           <div className="flex flex-col items-center justify-center h-64 space-y-4">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />

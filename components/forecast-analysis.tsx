@@ -33,17 +33,6 @@ interface ForecastAnalysisProps {
 export function ForecastAnalysis({ analysis }: ForecastAnalysisProps) {
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false)
 
-  const getScoreColor = (score: number) => {
-    if (score >= 8) return "bg-green-500"
-    if (score >= 6) return "bg-yellow-500"
-    return "bg-red-500"
-  }
-
-  const getScoreTextColor = (score: number) => {
-    if (score >= 8) return "text-green-600"
-    if (score >= 6) return "text-yellow-600"
-    return "text-red-600"
-  }
 
   const formatCurrency = (value: number, currency: 'MYR' | 'USD') => {
     const symbol = currency === 'MYR' ? 'RM' : '$'
@@ -75,46 +64,64 @@ export function ForecastAnalysis({ analysis }: ForecastAnalysisProps) {
               <Eye className="w-4 h-4" />
               Engagement Forecast
             </h4>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Likes</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="space-y-3">
+              <div className="flex items-center">
+                <span className="text-sm w-20">Likes</span>
+                <div className="flex items-center gap-3 flex-1 ml-9">
+                  <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full ${getScoreColor(analysis.engagement.likes)} transition-all duration-300`}
-                      style={{ width: `${(analysis.engagement.likes / 10) * 100}%` }}
+                      className={`h-full transition-all duration-300 ${
+                        (analysis.engagement.likes / 5000) < 0.5 ? 'bg-red-500' :
+                        (analysis.engagement.likes / 5000) < 0.8 ? 'bg-yellow-500' : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(100, (analysis.engagement.likes / 5000) * 100)}%` }}
                     />
                   </div>
-                  <span className={`text-sm font-medium ${getScoreTextColor(analysis.engagement.likes)}`}>
-                    {analysis.engagement.likes}/10
+                  <span className={`text-sm font-medium w-16 text-right ${
+                    (analysis.engagement.likes / 5000) < 0.5 ? 'text-red-600' :
+                    (analysis.engagement.likes / 5000) < 0.8 ? 'text-yellow-600' : 'text-green-600'
+                  }`}>
+                    {analysis.engagement.likes.toLocaleString()}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Shares</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="flex items-center">
+                <span className="text-sm w-20">Share</span>
+                <div className="flex items-center gap-3 flex-1 ml-8">
+                  <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full ${getScoreColor(analysis.engagement.shares)} transition-all duration-300`}
-                      style={{ width: `${(analysis.engagement.shares / 10) * 100}%` }}
+                      className={`h-full transition-all duration-300 ${
+                        (analysis.engagement.shares / 500) < 0.5 ? 'bg-red-500' :
+                        (analysis.engagement.shares / 500) < 0.8 ? 'bg-yellow-500' : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(100, (analysis.engagement.shares / 500) * 100)}%` }}
                     />
                   </div>
-                  <span className={`text-sm font-medium ${getScoreTextColor(analysis.engagement.shares)}`}>
-                    {analysis.engagement.shares}/10
+                  <span className={`text-sm font-medium w-16 text-right ${
+                    (analysis.engagement.shares / 500) < 0.5 ? 'text-red-600' :
+                    (analysis.engagement.shares / 500) < 0.8 ? 'text-yellow-600' : 'text-green-600'
+                  }`}>
+                    {analysis.engagement.shares.toLocaleString()}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Comments</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="flex items-center">
+                <span className="text-sm w-20">Comment</span>
+                <div className="flex items-center gap-3 flex-1 ml-2">
+                  <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full ${getScoreColor(analysis.engagement.comments)} transition-all duration-300`}
-                      style={{ width: `${(analysis.engagement.comments / 10) * 100}%` }}
+                      className={`h-full transition-all duration-300 ${
+                        (analysis.engagement.comments / 250) < 0.5 ? 'bg-red-500' :
+                        (analysis.engagement.comments / 250) < 0.8 ? 'bg-yellow-500' : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(100, (analysis.engagement.comments / 250) * 100)}%` }}
                     />
                   </div>
-                  <span className={`text-sm font-medium ${getScoreTextColor(analysis.engagement.comments)}`}>
-                    {analysis.engagement.comments}/10
+                  <span className={`text-sm font-medium w-16 text-right ${
+                    (analysis.engagement.comments / 250) < 0.5 ? 'text-red-600' :
+                    (analysis.engagement.comments / 250) < 0.8 ? 'text-yellow-600' : 'text-green-600'
+                  }`}>
+                    {analysis.engagement.comments.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -168,15 +175,22 @@ export function ForecastAnalysis({ analysis }: ForecastAnalysisProps) {
               Overall Score
             </h4>
             <div className="text-center">
-              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${getScoreColor(analysis.overallScore)} text-white text-xl font-bold mb-2`}>
+              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full text-white text-xl font-bold mb-2 ${
+                analysis.overallScore < 5 ? 'bg-red-500' :
+                analysis.overallScore < 7 ? 'bg-yellow-500' : 'bg-green-500'
+              }`}>
                 {analysis.overallScore}
               </div>
               <div className="text-sm text-gray-600">out of 10</div>
               <Badge 
                 variant="secondary" 
-                className={`mt-2 ${getScoreColor(analysis.overallScore)} text-white`}
+                className={`mt-2 text-white ${
+                  analysis.overallScore < 5 ? 'bg-red-500' :
+                  analysis.overallScore < 7 ? 'bg-yellow-500' : 'bg-green-500'
+                }`}
               >
-                {analysis.overallScore >= 8 ? 'Excellent' : analysis.overallScore >= 6 ? 'Good' : 'Needs Improvement'}
+                {analysis.overallScore < 5 ? 'Needs Improvement' : 
+                 analysis.overallScore < 7 ? 'Good' : 'Excellent'}
               </Badge>
             </div>
           </div>
