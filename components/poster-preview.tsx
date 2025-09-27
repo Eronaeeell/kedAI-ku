@@ -4,8 +4,9 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
-import { ArrowLeft, Sparkles, Share, Linkedin, CheckCircle, AlertCircle } from "lucide-react"
+import { ArrowLeft, Sparkles, Share, Linkedin, CheckCircle, AlertCircle, Twitter } from "lucide-react"
 import { LinkedInService } from "@/lib/linkedin-service"
+import { XService } from "@/lib/x-service"
 
 interface PosterPreviewProps {
   imageUrl: string
@@ -27,6 +28,11 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
     success: boolean;
     message: string;
     postId?: string;
+  } | null>(null)
+  const [xResult, setXResult] = useState<{
+    success: boolean;
+    message: string;
+    tweetId?: string;
   } | null>(null)
 
   const generateCaption = async () => {
@@ -67,18 +73,40 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
 
 
 
-  const handlePostToX = () => {
-    setIsPosting(true)
-    
-    // Simulate posting to X (Twitter)
-    const tweetText = encodeURIComponent(caption)
-    const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`
-    
-    // Open in new window
-    window.open(tweetUrl, '_blank', 'width=550,height=420')
-    
-    // Reset button state
-    setTimeout(() => setIsPosting(false), 2000)
+  const handlePostToX = async () => {
+    if (!caption.trim()) {
+      setXResult({ success: false, message: 'Please generate or enter a caption first' });
+      return;
+    }
+
+    if (caption.length > 280) {
+      setXResult({ success: false, message: 'Caption exceeds 280 character limit for X' });
+      return;
+    }
+
+    setIsPosting(true);
+    setXResult(null);
+
+    try {
+      // Post text-only to X (no image for now)
+      const result = await XService.postTweet(caption);
+      
+      if (result.ok && result.tweetId) {
+        setXResult({ 
+          success: true, 
+          message: `Successfully posted to X!`,
+          tweetId: result.tweetId
+        });
+      } else {
+        const errorMessage = result.error || 'Failed to post to X';
+        setXResult({ success: false, message: errorMessage });
+      }
+    } catch (error) {
+      const errorMessage = 'An unexpected error occurred while posting to X';
+      setXResult({ success: false, message: errorMessage });
+    } finally {
+      setIsPosting(false);
+    }
   }
 
   const handlePostToLinkedIn = async () => {
@@ -91,11 +119,8 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
     setLinkedInResult(null);
 
     try {
-      // Post with both text and image to LinkedIn
-      const result = await LinkedInService.postToLinkedInWithImage({ 
-        text: caption, 
-        imageUrl: imageUrl 
-      });
+      // Post text-only to LinkedIn (no image for now)
+      const result = await LinkedInService.postToLinkedIn(caption);
       
       if (result.ok && result.postId) {
         setLinkedInResult({ 
@@ -196,18 +221,18 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
             {/* X (Twitter) Post Button */}
             <Button
               onClick={handlePostToX}
-              disabled={!caption.trim() || isPosting}
+              disabled={!caption.trim() || isPosting || caption.length > 280}
               className="w-full bg-black hover:bg-gray-900 text-white py-4 text-lg font-semibold"
             >
               {isPosting ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin mr-3" />
-                  Posting...
+                  Posting to X...
                 </>
               ) : (
                 <>
-                  <Share className="w-5 h-5 mr-3" />
-                  Post on 𝕏 (Twitter)
+                  <Twitter className="w-5 h-5 mr-3" />
+                  Post to X (Twitter)
                 </>
               )}
             </Button>
@@ -233,6 +258,42 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
           </div>
 
           {/* Result Messages */}
+          {xResult && (
+            <Card className={`p-4 ${xResult.success 
+              ? 'bg-green-500/10 border-green-400/30' 
+              : 'bg-red-500/10 border-red-400/30'
+            }`}>
+              <div className="flex items-start gap-2">
+                {xResult.success ? (
+                  <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p className={`text-sm ${xResult.success 
+                    ? 'text-green-300' 
+                    : 'text-red-300'
+                  }`}>
+                    {xResult.message}
+                  </p>
+                  {xResult.success && xResult.tweetId && (
+                    <div className="mt-1">
+                      <p className="text-xs text-green-400/70">
+                        Tweet ID: {xResult.tweetId}
+                      </p>
+                      <button
+                        onClick={() => window.open(`https://x.com/user/status/${xResult.tweetId}`, '_blank')}
+                        className="text-xs text-green-400 hover:text-green-300 underline mt-1"
+                      >
+                        View on X →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
+          )}
+
           {linkedInResult && (
             <Card className={`p-4 ${linkedInResult.success 
               ? 'bg-green-500/10 border-green-400/30' 
@@ -262,8 +323,9 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
           )}
 
           <div className="text-white/60 text-sm text-center space-y-1">
-            <p>𝕏 opens Twitter in a new tab with your caption ready to post</p>
-            <p>🔒 LinkedIn posts directly and privately to your connections</p>
+            <p>🐦 X posts your caption directly (280 char limit)</p>
+            <p>🔒 LinkedIn posts privately to your connections (3000 char limit)</p>
+            <p>📸 Image posting temporarily disabled - text-only for now</p>
           </div>
         </div>
       </div>

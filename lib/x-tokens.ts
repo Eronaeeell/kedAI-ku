@@ -1,178 +1,216 @@
-// lib/x-tokens.ts
-import crypto from 'crypto';
+import { readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 
-export interface XTokens {
+interface XTokens {
   access_token: string;
   refresh_token: string;
-  expires_in?: number;
   expires_at?: number;
+  expires_in?: number;
   token_type?: string;
   scope?: string;
 }
 
-export interface XAuthConfig {
-  clientId: string;
-  clientSecret?: string;
-  redirectUri: string;
-  scope: string;
-}
-
 export class XTokenManager {
-  private static tokens: XTokens | null = null;
-  
-  static getConfig(): XAuthConfig {
-    return {
-      clientId: process.env.TWITTER_CLIENT_ID!,
-      clientSecret: process.env.TWITTER_CLIENT_SECRET || undefined,
-      redirectUri: process.env.X_REDIRECT_URI || 'http://127.0.0.1:3000/api/x-callback',
-      scope: 'tweet.write tweet.read users.read offline.access'
-    };
-  }
+  private static readonly TOKEN_FILE_PATH = join(process.cwd(), 'x_tokens.json');
 
-  static generatePKCE() {
-    const codeVerifier = crypto.randomBytes(32).toString('base64url');
-    const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
-    
-    return {
-      codeVerifier,
-      codeChallenge
-    };
-  }
-
-  static generateAuthUrl(codeChallenge: string): string {
-    const config = this.getConfig();
-    const state = crypto.randomBytes(16).toString('hex');
-    
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: config.clientId,
-      redirect_uri: config.redirectUri,
-      scope: config.scope,
-      state,
-      code_challenge: codeChallenge,
-      code_challenge_method: 'S256'
-    });
-
-    return `https://x.com/i/oauth2/authorize?${params.toString()}`;
-  }
-
-  static async exchangeCodeForTokens(
-    code: string, 
-    codeVerifier: string
-  ): Promise<XTokens> {
-    const config = this.getConfig();
-    
-    const body = new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: config.redirectUri,
-      code_verifier: codeVerifier
-    });
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    };
-
-    // Use Basic Auth if client secret is available (confidential client)
-    if (config.clientSecret) {
-      const credentials = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64');
-      headers['Authorization'] = `Basic ${credentials}`;
-    } else {
-      // Public client - include client_id in body
-      body.set('client_id', config.clientId);
-    }
-
-    const response = await fetch('https://api.x.com/2/oauth2/token', {
-      method: 'POST',
-      headers,
-      body
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Token exchange failed: ${error}`);
-    }
-
-    const tokens: XTokens = await response.json();
-    
-    // Calculate expiry time
-    if (tokens.expires_in) {
-      tokens.expires_at = Date.now() + (tokens.expires_in * 1000);
-    }
-
-    this.tokens = tokens;
-    return tokens;
-  }
-
-  static async refreshAccessToken(refreshToken?: string): Promise<XTokens> {
-    const config = this.getConfig();
-    const tokenToUse = refreshToken || process.env.TWITTER_REFRESH_TOKEN || this.tokens?.refresh_token;
-    
-    if (!tokenToUse) {
-      throw new Error('No refresh token available');
-    }
-
-    const body = new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: tokenToUse
-    });
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    };
-
-    // Use Basic Auth if client secret is available
-    if (config.clientSecret) {
-      const credentials = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64');
-      headers['Authorization'] = `Basic ${credentials}`;
-    } else {
-      body.set('client_id', config.clientId);
-    }
-
-    const response = await fetch('https://api.x.com/2/oauth2/token', {
-      method: 'POST',
-      headers,
-      body
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Token refresh failed: ${error}`);
-    }
-
-    const newTokens: XTokens = await response.json();
-    
-    // Calculate expiry time
-    if (newTokens.expires_in) {
-      newTokens.expires_at = Date.now() + (newTokens.expires_in * 1000);
-    }
-
-    this.tokens = newTokens;
-    return newTokens;
-  }
-
-  static async getValidAccessToken(): Promise<string> {
-    // Check if we have tokens and they're still valid
-    if (this.tokens?.access_token && this.tokens.expires_at) {
-      if (Date.now() < this.tokens.expires_at - 60000) { // 1 minute buffer
-        return this.tokens.access_token;
-      }
-    }
-
-    // Try to refresh tokens
-    try {
-      const newTokens = await this.refreshAccessToken();
-      return newTokens.access_token;
-    } catch (error) {
-      throw new Error(`Unable to get valid access token: ${error}`);
-    }
-  }
-
-  static setTokens(tokens: XTokens) {
-    this.tokens = tokens;
-  }
-
+  /**
+   * Get stored tokens from the file system
+   */
   static getStoredTokens(): XTokens | null {
-    return this.tokens;
+    try {
+      const tokenData = readFileSync(this.TOKEN_FILE_PATH, 'utf8');
+      const tokens = JSON.parse(tokenData);
+      
+      // Calculate expires_at if not present but expires_in is available
+      if (!tokens.expires_at && tokens.expires_in) {
+        // Assume the token was issued recently if no timestamp is available
+        const now = Math.floor(Date.now() / 1000);
+        tokens.expires_at = now + tokens.expires_in;
+      }
+      
+      return tokens;
+    } catch (error) {
+      console.log('No stored X tokens found or invalid format');
+      return null;
+    }
+  }
+
+  /**
+   * Save tokens to the file system
+   */
+  static saveTokens(tokens: XTokens): void {
+    try {
+      // Add expires_at timestamp if not present
+      if (!tokens.expires_at && tokens.expires_in) {
+        const now = Math.floor(Date.now() / 1000);
+        tokens.expires_at = now + tokens.expires_in;
+      }
+      
+      writeFileSync(this.TOKEN_FILE_PATH, JSON.stringify(tokens, null, 2));
+      console.log('✅ X tokens saved successfully');
+    } catch (error) {
+      console.error('❌ Failed to save X tokens:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if the current access token is still valid
+   */
+  static isTokenValid(tokens: XTokens): boolean {
+    if (!tokens || !tokens.access_token) {
+      return false;
+    }
+
+    // If no expiration info, assume it might be valid (let API decide)
+    if (!tokens.expires_at) {
+      return true;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const bufferTime = 300; // 5 minutes buffer
+
+    return tokens.expires_at > (now + bufferTime);
+  }
+
+  /**
+   * Refresh the access token using the refresh token
+   */
+  static async refreshAccessToken(): Promise<XTokens> {
+    const currentTokens = this.getStoredTokens();
+    
+    if (!currentTokens || !currentTokens.refresh_token) {
+      throw new Error('No refresh token available. Please re-authorize the application.');
+    }
+
+    console.log('🔄 Refreshing X access token...');
+
+    const clientId = process.env.TWITTER_CLIENT_ID || process.env.X_CLIENT_ID;
+    const clientSecret = process.env.TWITTER_CLIENT_SECRET || process.env.X_CLIENT_SECRET;
+
+    if (!clientId) {
+      throw new Error('TWITTER_CLIENT_ID not configured in environment variables');
+    }
+
+    try {
+      const body = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: currentTokens.refresh_token,
+      });
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      };
+
+      // Add authentication based on client type
+      if (clientSecret) {
+        // Confidential client - use Basic Auth
+        const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+        headers['Authorization'] = `Basic ${basic}`;
+      } else {
+        // Public client - include client_id in body
+        body.append('client_id', clientId);
+      }
+
+      const response = await fetch('https://api.x.com/2/oauth2/token', {
+        method: 'POST',
+        headers,
+        body: body.toString(),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Token refresh failed:', response.status, errorData);
+        throw new Error(`Token refresh failed: ${errorData.error_description || errorData.error || 'Unknown error'}`);
+      }
+
+      const newTokens = await response.json() as XTokens;
+      
+      // Merge with existing tokens (preserve refresh_token if not returned)
+      const mergedTokens: XTokens = {
+        ...currentTokens,
+        ...newTokens,
+        refresh_token: newTokens.refresh_token || currentTokens.refresh_token,
+      };
+
+      // Save the new tokens
+      this.saveTokens(mergedTokens);
+
+      console.log('✅ X tokens refreshed successfully');
+      return mergedTokens;
+      
+    } catch (error) {
+      console.error('❌ Error refreshing X tokens:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a valid access token, refreshing if necessary
+   */
+  static async getValidAccessToken(): Promise<string> {
+    let tokens = this.getStoredTokens();
+
+    // If no tokens, try to use environment variables as fallback
+    if (!tokens) {
+      const envAccessToken = process.env.TWITTER_ACCESS_TOKEN || process.env.X_ACCESS_TOKEN;
+      if (envAccessToken) {
+        console.log('🔄 Using access token from environment variables');
+        return envAccessToken;
+      }
+      throw new Error('No X tokens found. Please authorize the application first.');
+    }
+
+    // Check if token is still valid
+    if (this.isTokenValid(tokens)) {
+      console.log('✅ Using existing valid access token');
+      return tokens.access_token;
+    }
+
+    // Token expired, try to refresh
+    console.log('🔄 Access token expired, refreshing...');
+    try {
+      tokens = await this.refreshAccessToken();
+      return tokens.access_token;
+    } catch (error) {
+      // If refresh fails, try environment token as last resort
+      const envAccessToken = process.env.TWITTER_ACCESS_TOKEN || process.env.X_ACCESS_TOKEN;
+      if (envAccessToken) {
+        console.log('🔄 Refresh failed, falling back to environment token');
+        return envAccessToken;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Clear stored tokens (for logout)
+   */
+  static clearTokens(): void {
+    try {
+      writeFileSync(this.TOKEN_FILE_PATH, JSON.stringify({}));
+      console.log('✅ X tokens cleared');
+    } catch (error) {
+      console.error('❌ Failed to clear X tokens:', error);
+    }
+  }
+
+  /**
+   * Get token status for debugging
+   */
+  static getTokenStatus(): { hasTokens: boolean; isValid: boolean; expiresAt?: number } {
+    const tokens = this.getStoredTokens();
+    
+    if (!tokens || !tokens.access_token) {
+      return { hasTokens: false, isValid: false };
+    }
+
+    const isValid = this.isTokenValid(tokens);
+    
+    return {
+      hasTokens: true,
+      isValid,
+      expiresAt: tokens.expires_at,
+    };
   }
 }

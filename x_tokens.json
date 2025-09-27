@@ -1,7 +1,7 @@
 {
   "token_type": "bearer",
   "expires_in": 7200,
-  "access_token": "UUMtdThsUVhGeElEOFkxcUU0cktfUzk0UWJaeGR4R3QzUjhHdFhyNHBSbkdqOjE3NTg5NjExNjUwOTI6MTowOmF0OjE",
+  "access_token": "U0dIQXJaSlJub0dtcWZCSkQ5ZHJNNTN2bnd1c3BVT1JCY2V2OUhCTER6cmxJOjE3NTg5NzYxMjMxODk6MTowOmF0OjE",
   "scope": "tweet.write users.read tweet.read offline.access",
-  "refresh_token": "XzZnZVFCNlRyWk4ybnBGYWFoTUoyeC1Eb1pwalUwSmFRSWlwOHdNUG5UT013OjE3NTg5NjExNjUwOTI6MTowOnJ0OjE"
+  "refresh_token": "cWc5cGExRXdocUdoWXZaVXlCaHE3cmxTR1NmT1k4Y1hEUmtGb3YyeXJmS3pEOjE3NTg5NzYxMjMxODk6MTowOnJ0OjE"
 }

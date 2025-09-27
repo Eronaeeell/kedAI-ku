@@ -111,7 +111,7 @@ POSTER VISUAL SPECIFICATIONS:
 CRITICAL: Specify exact text content, positioning, font treatments, and color contrasts to create a complete promotional poster that could be immediately used for cafe marketing. The result should look like professional retail promotional materials with all text clearly readable and strategically placed.`
 
     const requestBody = {
-      model: "deepseek/deepseek-chat",
+      model: "openai/gpt-3.5-turbo",
       messages: [
         {
           role: "system",

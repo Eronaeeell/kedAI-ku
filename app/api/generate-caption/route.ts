@@ -86,7 +86,7 @@ REQUIREMENTS:
 Generate the complete social media caption that could be posted directly on Twitter/Instagram/TikTok.`
 
     const requestBody = {
-      model: "deepseek/deepseek-chat",
+      model: "openai/gpt-3.5-turbo",
       messages: [
         {
           role: "system",
