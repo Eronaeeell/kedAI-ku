@@ -26,7 +26,7 @@ export function CampaignCanvas({
   onGenerate,
 }: CampaignCanvasProps) {
   return (
-    <div className="flex-1 p-8 relative flex flex-col transition-all duration-300 ease-out">
+    <div className="h-full p-8 relative flex flex-col transition-all duration-300 ease-out">
       {/* Background gradient blob */}
       <div className="absolute inset-[-100px] flex items-center justify-center pointer-events-none">
         <div
