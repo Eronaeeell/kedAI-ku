@@ -8,6 +8,19 @@ import { CampaignCanvas } from "@/components/campaign-canvas"
 import { GenerationPanel } from "@/components/generation-panel"
 import { PosterPreview } from "@/components/poster-preview"
 import { Header } from "@/components/header"
+import { ForecastSidebar } from "@/components/forecast-sidebar"
+
+interface CampaignComponent {
+  id: string
+  type: 'local_data' | 'online_trend' | 'campaign_type'
+  title: string
+  description: string
+  data: any
+  relevanceScore: number
+  category: string
+  keywords: string[]
+  impact: 'high' | 'medium' | 'low'
+}
 
 export default function HomePage() {
   const [selectedComponents, setSelectedComponents] = useState<
@@ -24,6 +37,8 @@ export default function HomePage() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
   const [panelHeight, setPanelHeight] = useState(300)
   const [showPreview, setShowPreview] = useState(false)
+  const [showForecastSidebar, setShowForecastSidebar] = useState(false)
+  const [campaignAnalysis, setCampaignAnalysis] = useState<any>(null)
 
   const handleAddComponent = useCallback(
     (component: {
@@ -100,6 +115,14 @@ export default function HomePage() {
     }
   }, [])
 
+  const handleComponentsGenerated = useCallback((components: CampaignComponent[]) => {
+    setGeneratedComponents(components)
+  }, [])
+
+  const handleCampaignAnalysisGenerated = useCallback((analysis: any) => {
+    setCampaignAnalysis(analysis)
+  }, [])
+
   const handleResize = useCallback(
     (e: React.MouseEvent) => {
       const startY = e.clientY
@@ -151,6 +174,7 @@ export default function HomePage() {
               isGenerating={isGenerating ? "GENERATING" : (generatedImage || false)}
               onGenerate={handleGenerate}
               showPreview={showPreview}
+              onForecastAnalysisClick={() => setShowForecastSidebar(true)}
             />
           </div>
 
@@ -160,9 +184,21 @@ export default function HomePage() {
               generatedImage={generatedImage}
               selectedComponents={selectedComponents}
               onGenerate={handleGenerate}
+              onComponentsGenerated={handleComponentsGenerated}
+              onCampaignAnalysisGenerated={handleCampaignAnalysisGenerated}
             />
           </div>
         </div>
+
+        {/* Forecast Sidebar */}
+        {showForecastSidebar && selectedComponents.length > 0 && (
+          <ForecastSidebar
+            isOpen={showForecastSidebar}
+            onClose={() => setShowForecastSidebar(false)}
+            campaignAnalysis={campaignAnalysis}
+            selectedComponents={selectedComponents}
+          />
+        )}
       </div>
     </div>
   )

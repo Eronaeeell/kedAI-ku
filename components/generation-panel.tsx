@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Send, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { Send, Loader2, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
 
 interface SelectedComponent {
@@ -37,12 +37,31 @@ interface CampaignAnalysis {
   eventImpact: string
 }
 
+interface EngagementForecast {
+  likes: number
+  shares: number
+  comments: number
+}
+
+interface SalesDataPoint {
+  period: string
+  value: number
+  currency: 'MYR' | 'USD'
+}
+
+interface ForecastAnalysisData {
+  engagement: EngagementForecast
+  salesForecast: SalesDataPoint[]
+  overallScore: number
+}
+
 interface GenerationPanelProps {
   isGenerating: boolean
   generatedImage: string | null
   selectedComponents: SelectedComponent[]
   onGenerate: (prompt: string) => void
   onComponentsGenerated?: (components: CampaignComponent[]) => void
+  onCampaignAnalysisGenerated?: (analysis: CampaignAnalysis) => void
 }
 
 export function GenerationPanel({
@@ -51,12 +70,16 @@ export function GenerationPanel({
   selectedComponents,
   onGenerate,
   onComponentsGenerated,
+  onCampaignAnalysisGenerated,
 }: GenerationPanelProps) {
   const [prompt, setPrompt] = useState(
     "Based on September's sales data, current cafe food & beverages trend, and weather prediction, can you help to generate a campaign plan for October to boost my sales?",
   )
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<CampaignAnalysis | null>(null)
+  const [forecastAnalysis, setForecastAnalysis] = useState<ForecastAnalysisData | null>(null)
+  const [isGeneratingForecast, setIsGeneratingForecast] = useState(false)
+  const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleGenerate = async () => {
@@ -65,6 +88,7 @@ export function GenerationPanel({
     setIsAnalyzing(true)
     setError(null)
     setAnalysisResult(null)
+    setForecastAnalysis(null)
 
     try {
       const response = await fetch("/api/generate-campaign", {
@@ -78,6 +102,7 @@ export function GenerationPanel({
       if (result.success) {
         setAnalysisResult(result.data)
         onComponentsGenerated?.(result.data.components)
+        onCampaignAnalysisGenerated?.(result.data)
 
         toast.success("Campaign generated", {
           description: `Created ${result.data.components?.length ?? 0} component(s) with insights.`,
@@ -96,6 +121,7 @@ export function GenerationPanel({
       setIsAnalyzing(false)
     }
   }
+
 
   const handleSend = () => handleGenerate()
 
@@ -126,62 +152,81 @@ export function GenerationPanel({
           </div>
 
           {analysisResult && (
-            <div className="mt-4 space-y-4">
-              <div className="text-card-foreground flex flex-col gap-4 rounded-xl border shadow-sm p-4 bg-background/50 border-border/50">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <h3 className="text-lg font-semibold">Analysis Complete</h3>
-                </div>
-
-                {analysisResult.insights.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">Key Insights:</h4>
-                    <ul className="text-sm space-y-1">
-                      {analysisResult.insights.map((insight, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-primary">•</span>
-                          <span>{insight}</span>
-                        </li>
-                      ))}
-                    </ul>
+            <div className="mt-4">
+              <div className="text-card-foreground rounded-xl border shadow-sm bg-background/50 border-border/50">
+                {/* Analysis Header - Always Visible */}
+                <div 
+                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-background/30 transition-colors"
+                  onClick={() => setIsAnalysisExpanded(!isAnalysisExpanded)}
+                >
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <h3 className="text-lg font-semibold">Analysis Complete</h3>
                   </div>
-                )}
-
-                {analysisResult.recommendations.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">Recommendations:</h4>
-                    <ul className="text-sm space-y-1">
-                      {analysisResult.recommendations.map((rec, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-primary">•</span>
-                          <span>{rec}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Weather:</span>
-                    <p className="text-muted-foreground">{analysisResult.weatherImpact}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Trends:</span>
-                    <p className="text-muted-foreground">{analysisResult.trendImpact}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Sales:</span>
-                    <p className="text-muted-foreground">{analysisResult.salesImpact}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Events:</span>
-                    <p className="text-muted-foreground">{analysisResult.eventImpact}</p>
+                  <div className="flex items-center gap-2">
+                    {isAnalysisExpanded ? (
+                      <ChevronUp className="w-5 h-5" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5" />
+                    )}
                   </div>
                 </div>
+
+                {/* Collapsible Analysis Content */}
+                {isAnalysisExpanded && (
+                  <div className="px-4 pb-4 space-y-4 border-t border-border/50 pt-4">
+                    {analysisResult.insights.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Key Insights:</h4>
+                        <ul className="text-sm space-y-1">
+                          {analysisResult.insights.map((insight, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="text-primary">•</span>
+                              <span>{insight}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {analysisResult.recommendations.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Recommendations:</h4>
+                        <ul className="text-sm space-y-1">
+                          {analysisResult.recommendations.map((rec, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="text-primary">•</span>
+                              <span>{rec}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Weather:</span>
+                        <p className="text-muted-foreground">{analysisResult.weatherImpact}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Trends:</span>
+                        <p className="text-muted-foreground">{analysisResult.trendImpact}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Sales:</span>
+                        <p className="text-muted-foreground">{analysisResult.salesImpact}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Events:</span>
+                        <p className="text-muted-foreground">{analysisResult.eventImpact}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
+
 
           {error && (
             <div className="mt-4">

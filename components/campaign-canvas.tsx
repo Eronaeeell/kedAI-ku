@@ -19,6 +19,7 @@ interface CampaignCanvasProps {
   isGenerating: boolean | string
   onGenerate: (status: string) => void
   showPreview?: boolean
+  onForecastAnalysisClick?: () => void
 }
 
 export function CampaignCanvas({
@@ -27,6 +28,7 @@ export function CampaignCanvas({
   isGenerating,
   onGenerate,
   showPreview = false,
+  onForecastAnalysisClick,
 }: CampaignCanvasProps) {
   
   // Add custom CSS for abstract spinning animations during generation
@@ -231,7 +233,10 @@ export function CampaignCanvas({
                   </div>
                 </div>
               ) : (
-                <h3 className="text-xl font-semibold text-white drop-shadow-lg backdrop-blur-sm">
+                <h3 
+                  className="text-xl font-semibold text-white drop-shadow-lg backdrop-blur-sm cursor-pointer hover:text-blue-200 transition-colors"
+                  onClick={() => onForecastAnalysisClick?.()}
+                >
                   {isGenerating === "GENERATING" ? "Generating..." : "October's Campaign"}
                 </h3>
               )}

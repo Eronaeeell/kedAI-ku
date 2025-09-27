@@ -26,9 +26,12 @@ export default function CustomModal({ open, title, children, onClose }: CustomMo
   return createPortal(
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm bg-card text-card-foreground rounded-xl border p-4 z-10">
-          {title && <h3 className="text-sm font-semibold mb-2">{title}</h3>}
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pointer-events-none">
+        <div 
+          className="w-full max-w-lg bg-card text-card-foreground rounded-xl border p-6 z-10 pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {title && <h3 className="text-lg font-semibold mb-4">{title}</h3>}
           {children}
         </div>
       </div>
