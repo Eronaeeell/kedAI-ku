@@ -8,6 +8,18 @@ import { CampaignCanvas } from "@/components/campaign-canvas"
 import { GenerationPanel } from "@/components/generation-panel"
 import { Header } from "@/components/header"
 
+interface CampaignComponent {
+  id: string
+  type: 'local_data' | 'online_trend' | 'campaign_type'
+  title: string
+  description: string
+  data: any
+  relevanceScore: number
+  category: string
+  keywords: string[]
+  impact: 'high' | 'medium' | 'low'
+}
+
 export default function HomePage() {
   const [selectedComponents, setSelectedComponents] = useState<
     Array<{
@@ -19,6 +31,7 @@ export default function HomePage() {
     }>
   >([])
 
+  const [generatedComponents, setGeneratedComponents] = useState<CampaignComponent[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
   const [panelHeight, setPanelHeight] = useState(300)
@@ -60,6 +73,10 @@ export default function HomePage() {
     setIsGenerating(false)
   }, [])
 
+  const handleComponentsGenerated = useCallback((components: CampaignComponent[]) => {
+    setGeneratedComponents(components)
+  }, [])
+
   const handleResize = useCallback(
     (e: React.MouseEvent) => {
       const startY = e.clientY
@@ -88,7 +105,10 @@ export default function HomePage() {
 
       <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
         {/* Component Sidebar */}
-        <ComponentSidebar onAddComponent={handleAddComponent} />
+        <ComponentSidebar 
+          onAddComponent={handleAddComponent} 
+          generatedComponents={generatedComponents}
+        />
 
         {/* Main Canvas Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -107,6 +127,7 @@ export default function HomePage() {
               generatedImage={generatedImage}
               selectedComponents={selectedComponents}
               onGenerate={() => handleGenerate()}
+              onComponentsGenerated={handleComponentsGenerated}
             />
           </div>
         </div>
