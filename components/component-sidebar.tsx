@@ -25,22 +25,7 @@ interface CampaignComponent {
   impact: "high" | "medium" | "low"
 }
 
-const STATIC_COMPONENTS: Component[] = [
-  { id: "deepavali", name: "Deepavali festival", category: "Local Data", color: "gradient-blue-teal" },
-  { id: "coldplay", name: "Coldplay concert", category: "Local Data", color: "gradient-blue-teal" },
-  { id: "rainy", name: "Rainy weeks", category: "Local Data", color: "gradient-blue-teal" },
-  { id: "sunny", name: "Sunny weeks", category: "Local Data", color: "gradient-blue-teal" },
-  { id: "matcha-boba", name: "Matcha + boba", category: "Online trend data", color: "gradient-purple-blue" },
-  { id: "cold-matcha", name: "Cold Matcha", category: "Online trend data", color: "gradient-purple-blue" },
-  { id: "ceremony", name: "Ceremony grade matcha", category: "Online trend data", color: "gradient-purple-blue" },
-  { id: "hot-matcha", name: "Hot Matcha", category: "Online trend data", color: "gradient-purple-blue" },
-  { id: "buy-one", name: "Buy 1 get 1", category: "Campaign Type", color: "gradient-pink-orange" },
-  { id: "free-upsize", name: "Free upsize drink", category: "Campaign Type", color: "gradient-pink-orange" },
-  { id: "discount", name: "Discount 20%", category: "Campaign Type", color: "gradient-pink-orange" },
-  { id: "combo-snack", name: "Combo Snack + Matcha", category: "Campaign Type", color: "gradient-pink-orange" },
-]
-
-const CATEGORIES = ["Local Data", "Online trend data", "Campaign Type"]
+const CATEGORIES = ["Local Data", "Online trend data", "Campaign Type"] as const
 const STORAGE_KEY = "kedai.customComponents.v1"
 
 interface ComponentSidebarProps {
@@ -60,9 +45,16 @@ export function ComponentSidebar({
   generatedComponents = [],
   onRemoveFromCanvas,
 }: ComponentSidebarProps) {
-  const [allComponents, setAllComponents] = useState<Component[]>(STATIC_COMPONENTS)
+  // Only AI-generated components (no mocks)
+  const [allComponents, setAllComponents] = useState<Component[]>([])
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [mounted, setMounted] = useState(false)
+  const [customComponents, setCustomComponents] = useState<Component[]>([])
+  const [showModal, setShowModal] = useState(false)
+  const [newName, setNewName] = useState("")
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  // Convert AI components to the same visual spec as static items
+  // Normalize AI components to same visual spec as the original cards
   useEffect(() => {
     const converted: Component[] = generatedComponents.map((comp) => ({
       id: comp.id,
@@ -73,24 +65,15 @@ export function ComponentSidebar({
           : comp.type === "online_trend"
           ? "Online trend data"
           : "Campaign Type",
-      // match static color by category so visuals are identical
       color: colorByType(comp.type),
     }))
 
-    const combined = [...STATIC_COMPONENTS, ...converted]
-    const unique = combined.filter((c, i, arr) => i === arr.findIndex((x) => x.id === c.id))
+    // uniquify by id (in case backend sends duplicates)
+    const unique = converted.filter((c, i, arr) => i === arr.findIndex((x) => x.id === c.id))
     setAllComponents(unique)
   }, [generatedComponents])
 
-  const [mounted, setMounted] = useState(false)
-  const [customComponents, setCustomComponents] = useState<Component[]>([])
-  const [showModal, setShowModal] = useState(false)
-  const [newName, setNewName] = useState("")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     if (!mounted) return
@@ -111,9 +94,7 @@ export function ComponentSidebar({
     if (!mounted) return
     const onStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          setCustomComponents(JSON.parse(e.newValue) as Component[])
-        } catch {}
+        try { setCustomComponents(JSON.parse(e.newValue) as Component[]) } catch {}
       }
     }
     window.addEventListener("storage", onStorage)
@@ -156,9 +137,9 @@ export function ComponentSidebar({
         <div>
           <h2 className="text-lg font-semibold text-sidebar-foreground mb-2">Components</h2>
           <p className="text-sm text-muted-foreground">
-            {generatedComponents.length > 0
-              ? `AI-generated components (${generatedComponents.length}) + static components`
-              : "Drag and drop components to build your campaign"}
+            {allComponents.length > 0
+              ? `AI-generated components (${allComponents.length})`
+              : "No AI components yet — generate suggestions to see them here."}
           </p>
         </div>
 
@@ -170,6 +151,12 @@ export function ComponentSidebar({
               (gc.type === "online_trend" && category === "Online trend data") ||
               (gc.type === "campaign_type" && category === "Campaign Type"),
           )
+
+          if (categoryComponents.length === 0) return null
+
+          const isExpanded = !!expanded[category]
+          const visible = isExpanded ? categoryComponents : categoryComponents.slice(0, 4)
+          const hiddenCount = Math.max(0, categoryComponents.length - visible.length)
 
           return (
             <div key={category} className="space-y-3">
@@ -184,8 +171,9 @@ export function ComponentSidebar({
                 )}
               </div>
 
+              {/* Grid of components */}
               <div className="grid grid-cols-2 gap-3">
-                {categoryComponents.map((component) => {
+                {visible.map((component) => {
                   const generatedComp = generatedComponents.find((gc) => gc.id === component.id)
                   const isGenerated = Boolean(generatedComp)
 
@@ -202,7 +190,7 @@ export function ComponentSidebar({
                       )}
 
                       <div className="flex flex-col items-center text-center space-y-2">
-                        {/* Gradient bubble with white center and inner ring */}
+                        {/* Gradient bubble (same style as your static cards) */}
                         <div className="flex items-center justify-center w-full">
                           <div
                             className={`w-12 h-12 rounded-full ${component.color} flex items-center justify-center group-hover:animate-float`}
@@ -237,6 +225,18 @@ export function ComponentSidebar({
                   )
                 })}
               </div>
+
+              {/* See more / See less at bottom */}
+              {categoryComponents.length > 4 && (
+                <div className="flex justify-center mt-2">
+                  <button
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => setExpanded((s) => ({ ...s, [category]: !isExpanded }))}
+                  >
+                    {isExpanded ? "See less" : `See more (${hiddenCount})`}
+                  </button>
+                </div>
+              )}
             </div>
           )
         })}
