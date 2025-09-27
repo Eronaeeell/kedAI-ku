@@ -103,19 +103,17 @@ export default function HomePage() {
     <div className="h-screen bg-gradient-to-br from-background via-accent/20 to-secondary/30 overflow-hidden">
       <Header />
 
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+      <div className="flex h-[calc(100vh-4rem)]">
         {/* Component Sidebar */}
         <ComponentSidebar
-          
           onAddComponent={handleAddComponent}
           onRemoveFromCanvas={handleRemoveComponent}
-        
           generatedComponents={generatedComponents}
         />
 
         {/* Main Canvas Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-[2]">
+          <div className="flex-[2] min-h-0">
             <CampaignCanvas
               selectedComponents={selectedComponents}
               onRemoveComponent={handleRemoveComponent}
@@ -124,7 +122,7 @@ export default function HomePage() {
             />
           </div>
 
-          <div className="flex-1 p-6 overflow-auto leading-5">
+          <div className="flex-1 p-6 overflow-y-auto">
             <GenerationPanel
               isGenerating={isGenerating}
               generatedImage={generatedImage}
