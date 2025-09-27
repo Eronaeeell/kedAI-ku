@@ -98,7 +98,7 @@ export function GenerationPanel({
 
   return (
     <div className="h-full overflow-hidden leading-5">
-      <div className="max-w-4xl mx-auto h-full overflow-y-auto">
+      <div className="max-w-4xl mx-auto h-full overflow-y-auto no-scrollbar">
         <div className="mt-4">
           <div className="text-card-foreground flex flex-col gap-4 rounded-xl border shadow-sm p-4 bg-background/50 border-border/50">
             <label className="text-sm font-medium text-card-foreground">Campaign Brief</label>
