@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Send, Loader2, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
+import { PostToX } from "@/components/post-to-x"
+import { PostToLinkedIn } from "@/components/post-to-linkedin"
 
 interface SelectedComponent {
   id: string
@@ -240,6 +242,25 @@ export function GenerationPanel({
                 <Button size="sm" variant="outline" onClick={() => setError(null)} className="w-fit">
                   Dismiss
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Social Media Posting Section */}
+          {generatedImage && (
+            <div className="mt-6 space-y-4">
+              <h3 className="text-lg font-semibold text-card-foreground">Share Your Campaign</h3>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <PostToX
+                  initialText="🚀 Just created an amazing campaign poster! Check it out! #AI #Marketing #CampaignGenerator"
+                  initialImage={generatedImage}
+                  className="bg-background/80"
+                />
+                <PostToLinkedIn
+                  initialText="🎯 Excited to share our latest campaign creation! Leveraging AI and data insights to drive better marketing results. #AI #Marketing #Innovation #DataDriven"
+                  initialImage={generatedImage}
+                  className="bg-background/80"
+                />
               </div>
             </div>
           )}

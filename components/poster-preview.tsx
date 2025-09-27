@@ -4,9 +4,8 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Sparkles, Twitter, CheckCircle, AlertCircle, ExternalLink } from "lucide-react"
-import { XService } from "@/lib/x-service"
+import { ArrowLeft, Sparkles, Share, Linkedin, CheckCircle, AlertCircle } from "lucide-react"
+import { LinkedInService } from "@/lib/linkedin-service"
 
 interface PosterPreviewProps {
   imageUrl: string
@@ -23,10 +22,11 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
   const [caption, setCaption] = useState("")
   const [isGeneratingCaption, setIsGeneratingCaption] = useState(false)
   const [isPosting, setIsPosting] = useState(false)
-  const [postResult, setPostResult] = useState<{
+  const [isPostingLinkedIn, setIsPostingLinkedIn] = useState(false)
+  const [linkedInResult, setLinkedInResult] = useState<{
     success: boolean;
     message: string;
-    tweetId?: string;
+    postId?: string;
   } | null>(null)
 
   const generateCaption = async () => {
@@ -67,42 +67,53 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
 
 
 
-  const handlePostToX = async () => {
+  const handlePostToX = () => {
+    setIsPosting(true)
+    
+    // Simulate posting to X (Twitter)
+    const tweetText = encodeURIComponent(caption)
+    const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`
+    
+    // Open in new window
+    window.open(tweetUrl, '_blank', 'width=550,height=420')
+    
+    // Reset button state
+    setTimeout(() => setIsPosting(false), 2000)
+  }
+
+  const handlePostToLinkedIn = async () => {
     if (!caption.trim()) {
-      setPostResult({ success: false, message: 'Please enter some text to post' });
+      setLinkedInResult({ success: false, message: 'Please generate or enter a caption first' });
       return;
     }
 
-    if (caption.length > 280) {
-      setPostResult({ success: false, message: 'Caption exceeds 280 character limit' });
-      return;
-    }
-
-    setIsPosting(true);
-    setPostResult(null);
+    setIsPostingLinkedIn(true);
+    setLinkedInResult(null);
 
     try {
-      const result = await XService.postTweetWithImage({
-        text: caption,
-        imageUrl: imageUrl
+      // Post with both text and image to LinkedIn
+      const result = await LinkedInService.postToLinkedInWithImage({ 
+        text: caption, 
+        imageUrl: imageUrl 
       });
       
-      if (result.ok && result.tweetId) {
-        setPostResult({ 
+      if (result.ok && result.postId) {
+        setLinkedInResult({ 
           success: true, 
-          message: 'Successfully posted to X!',
-          tweetId: result.tweetId
+          message: `Successfully posted to LinkedIn!`,
+          postId: result.postId
         });
       } else {
-        const errorMessage = result.error || 'Failed to post to X';
-        setPostResult({ success: false, message: errorMessage });
+        const errorMessage = result.error || 'Failed to post to LinkedIn';
+        setLinkedInResult({ success: false, message: errorMessage });
       }
     } catch (error) {
-      setPostResult({ success: false, message: 'An unexpected error occurred while posting' });
+      const errorMessage = 'An unexpected error occurred while posting to LinkedIn';
+      setLinkedInResult({ success: false, message: errorMessage });
     } finally {
-      setIsPosting(false);
+      setIsPostingLinkedIn(false);
     }
-  };
+  }
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 z-50 flex items-center justify-center p-6">
@@ -180,51 +191,13 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
             </div>
           </Card>
 
-          {/* Post Result */}
-          {postResult && (
-            <Card className={`p-4 ${postResult.success 
-              ? 'bg-green-500/20 border-green-400/30' 
-              : 'bg-red-500/20 border-red-400/30'
-            } backdrop-blur-lg`}>
-              <div className="flex items-start gap-3">
-                {postResult.success ? (
-                  <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                )}
-                <div className="flex-1">
-                  <p className={`text-sm font-medium ${
-                    postResult.success ? 'text-green-200' : 'text-red-200'
-                  }`}>
-                    {postResult.message}
-                  </p>
-                  {postResult.success && postResult.tweetId && (
-                    <div className="mt-2 pt-2 border-t border-green-400/30">
-                      <p className="text-xs text-green-300">
-                        Tweet ID: {postResult.tweetId}
-                      </p>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto p-0 text-xs text-green-300 hover:text-green-200"
-                        onClick={() => window.open(`https://x.com/user/status/${postResult.tweetId}`, '_blank')}
-                      >
-                        View on X
-                        <ExternalLink className="w-3 h-3 ml-1" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {/* Post buttons */}
-          <div className="space-y-3">
+          {/* Social Media Posting Buttons */}
+          <div className="space-y-4">
+            {/* X (Twitter) Post Button */}
             <Button
               onClick={handlePostToX}
               disabled={!caption.trim() || isPosting}
-              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white py-4 text-lg font-semibold border-0 shadow-lg shadow-blue-500/25"
+              className="w-full bg-black hover:bg-gray-900 text-white py-4 text-lg font-semibold"
             >
               {isPosting ? (
                 <>
@@ -233,14 +206,65 @@ export function PosterPreview({ imageUrl, onBack, selectedComponents }: PosterPr
                 </>
               ) : (
                 <>
-                  <Twitter className="w-5 h-5 mr-3" />
-                  Post to X
+                  <Share className="w-5 h-5 mr-3" />
+                  Post on 𝕏 (Twitter)
+                </>
+              )}
+            </Button>
+
+            {/* LinkedIn Post Button */}
+            <Button
+              onClick={handlePostToLinkedIn}
+              disabled={!caption.trim() || isPostingLinkedIn}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 text-lg font-semibold"
+            >
+              {isPostingLinkedIn ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin mr-3" />
+                  Posting to LinkedIn...
+                </>
+              ) : (
+                <>
+                  <Linkedin className="w-5 h-5 mr-3" />
+                  Post to LinkedIn (Private)
                 </>
               )}
             </Button>
           </div>
 
+          {/* Result Messages */}
+          {linkedInResult && (
+            <Card className={`p-4 ${linkedInResult.success 
+              ? 'bg-green-500/10 border-green-400/30' 
+              : 'bg-red-500/10 border-red-400/30'
+            }`}>
+              <div className="flex items-start gap-2">
+                {linkedInResult.success ? (
+                  <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p className={`text-sm ${linkedInResult.success 
+                    ? 'text-green-300' 
+                    : 'text-red-300'
+                  }`}>
+                    {linkedInResult.message}
+                  </p>
+                  {linkedInResult.success && linkedInResult.postId && (
+                    <p className="text-xs text-green-400/70 mt-1">
+                      Post ID: {linkedInResult.postId}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </Card>
+          )}
 
+          <div className="text-white/60 text-sm text-center space-y-1">
+            <p>𝕏 opens Twitter in a new tab with your caption ready to post</p>
+            <p>🔒 LinkedIn posts directly and privately to your connections</p>
+          </div>
         </div>
       </div>
     </div>

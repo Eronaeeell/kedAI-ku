@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Twitter, TestTube, Image as ImageIcon } from 'lucide-react'
+import { Twitter, TestTube, Image as ImageIcon, Linkedin } from 'lucide-react'
 
 export function Header() {
   return (
@@ -32,6 +32,14 @@ export function Header() {
                 <ImageIcon className="w-3 h-3 mr-1" />
                 Image Test
                 <Badge variant="outline" className="ml-1 text-xs border-purple-300 text-purple-700 dark:border-purple-600 dark:text-purple-400">Image Only</Badge>
+              </Button>
+            </Link>
+            
+            <Link href="/test-linkedin">
+              <Button variant="ghost" size="sm" className="text-xs">
+                <Linkedin className="w-3 h-3 mr-1" />
+                LinkedIn Test
+                <Badge variant="secondary" className="ml-1 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">New</Badge>
               </Button>
             </Link>
           </div>
