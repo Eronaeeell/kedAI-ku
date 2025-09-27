@@ -33,6 +33,7 @@ export default function HomePage() {
     }>
   >([])
 
+  const [generatedComponents, setGeneratedComponents] = useState<CampaignComponent[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
   const [panelHeight, setPanelHeight] = useState(300)
@@ -163,11 +164,12 @@ export default function HomePage() {
         <ComponentSidebar
           onAddComponent={handleAddComponent}
           onRemoveFromCanvas={handleRemoveComponent}
+          generatedComponents={generatedComponents}
         />
 
         {/* Main Canvas Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-[2]">
+          <div className="flex-[2] min-h-0">
             <CampaignCanvas
               selectedComponents={selectedComponents}
               onRemoveComponent={handleRemoveComponent}
@@ -178,7 +180,7 @@ export default function HomePage() {
             />
           </div>
 
-          <div className="flex-1 p-6 overflow-auto leading-5">
+          <div className="flex-1 p-6 overflow-y-auto">
             <GenerationPanel
               isGenerating={isGenerating}
               generatedImage={generatedImage}
